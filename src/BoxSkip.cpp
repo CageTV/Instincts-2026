@@ -136,6 +136,19 @@ namespace BoxSkip
 		{
 			const bool had = reinterpret_cast<GetActivateText_t>(g_origText)(a_base, a_activator, a_dst);
 			try {
+				{
+					// diagnostics: the first calls, so a hook that is reached but filtered out can be told from one that is never reached
+					static int calls = 0;
+					if (calls < 40) {
+						++calls;
+						const auto* pick = RE::CrosshairPickData::GetSingleton();
+						const auto  target = pick ? pick->GetActiveTarget().get() : nullptr;
+						auto*       actor = target ? target->As<RE::Actor>() : nullptr;
+						SKSE::log::info("GetActivateText call: base '{}' originalHadText {} text '{}' activatorIsPlayer {} crosshairActor '{}' sameBase {} qualifies {}", a_base && a_base->GetName() ? a_base->GetName() : "?", had,
+							a_dst.c_str() ? a_dst.c_str() : "", a_activator == RE::PlayerCharacter::GetSingleton(), actor && actor->GetName() ? actor->GetName() : "-", actor && actor->GetActorBase() == a_base,
+							actor ? Subdue::QualifiesForTaming(actor) : false);
+					}
+				}
 				if (had || !Config::GetBox().label || !a_activator || a_activator != RE::PlayerCharacter::GetSingleton()) {
 					return had;
 				}
