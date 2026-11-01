@@ -149,7 +149,8 @@ namespace BoxSkip
 							actor ? Subdue::QualifiesForTaming(actor) : false);
 					}
 				}
-				if (had || !Config::GetBox().label || !a_activator || a_activator != RE::PlayerCharacter::GetSingleton()) {
+				// (the first argument is NOT the player pointer - logged 16:53 - so it is not tested; the crosshair target + base identify the animal)
+				if (had || !Config::GetBox().label) {
 					return had;
 				}
 				const auto* pick = RE::CrosshairPickData::GetSingleton();
