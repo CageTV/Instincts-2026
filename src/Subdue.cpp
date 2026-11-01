@@ -191,8 +191,12 @@ namespace Subdue
 				knockedOut ? "knocked out" : "killed");
 			if (knockedOut) {
 				t->StopCombat();
-				if (auto* caster = t->GetMagicCaster(RE::MagicSystem::CastingSource::kInstant)) {
-					caster->CastSpellImmediate(F.spell, false, t, 1.0f, false, 0.0f, nullptr);
+				// Cast FROM THE PLAYER at the animal (player as the blamed source). The first version cast from the animal itself with no
+				// source actor and crashed inside the engine's cast routine (fox, 2026-11-01).
+				if (auto* caster = player->GetMagicCaster(RE::MagicSystem::CastingSource::kInstant); caster && F.spell) {
+					caster->CastSpellImmediate(F.spell, false, t, 1.0f, false, 0.0f, player);
+				} else {
+					SKSE::log::warn("{}: no instant caster on the player, knock-out spell not cast", name);
 				}
 				SetDowned(a_id, true);
 				Note("The " + name + " is knocked out.");
