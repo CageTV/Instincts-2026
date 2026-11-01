@@ -26,7 +26,27 @@ namespace Config
 		int         slotLimit = 3;
 	};
 
+	// combat behaviour of a pet class (engine values): aggression 0 unaggressive, 1 aggressive, 2 very aggressive, 3 frenzied;
+	// confidence 0 cowardly, 1 cautious, 2 average, 3 brave, 4 foolhardy; assistance 0 helps nobody, 1 helps allies, 2 helps friends and allies
+	struct ClassAI
+	{
+		int aggression;
+		int confidence;
+		int assistance;
+	};
+
+	struct Pets
+	{
+		bool    enabled = true;
+		float   scanSeconds = 2.0f;
+		ClassAI fighter{ 1, 3, 2 };
+		ClassAI scavenger{ 1, 2, 1 };
+		ClassAI gatherer{ 0, 0, 0 };
+		ClassAI producer{ 0, 0, 0 };
+	};
+
 	Subdue& Get();
+	Pets&   GetPets();
 	void    Load();
 	void    Save();
 }

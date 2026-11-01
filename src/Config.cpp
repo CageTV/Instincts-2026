@@ -15,10 +15,12 @@ namespace Config
 	{
 		using json = nlohmann::json;
 		Subdue cfg;
+		Pets   pets;
 		const auto kFile = std::filesystem::path("Data/SKSE/Plugins/BeastHarmony/config.json");
 	}
 
 	Subdue& Get() { return cfg; }
+	Pets&   GetPets() { return pets; }
 
 	void Load()
 	{
@@ -44,6 +46,19 @@ namespace Config
 			cfg.levelGreat = l.value("great", cfg.levelGreat);
 			cfg.levelHuge = l.value("huge", cfg.levelHuge);
 			cfg.slotLimit = std::clamp(s.value("slotLimit", cfg.slotLimit), 1, 10);
+			const auto pj = j.value("pets", json::object());
+			pets.enabled = pj.value("enabled", pets.enabled);
+			pets.scanSeconds = pj.value("scanSeconds", pets.scanSeconds);
+			const auto rd = [&](const char* name, ClassAI& ai) {
+				const auto o = pj.value(name, json::object());
+				ai.aggression = std::clamp(o.value("aggression", ai.aggression), 0, 3);
+				ai.confidence = std::clamp(o.value("confidence", ai.confidence), 0, 4);
+				ai.assistance = std::clamp(o.value("assistance", ai.assistance), 0, 2);
+			};
+			rd("fighter", pets.fighter);
+			rd("scavenger", pets.scavenger);
+			rd("gatherer", pets.gatherer);
+			rd("producer", pets.producer);
 		} catch (const std::exception& e) {
 			SKSE::log::warn("config.json unreadable ({}), using defaults", e.what());
 		}
@@ -57,6 +72,8 @@ namespace Config
 			{ "subdue", { { "enabled", cfg.enabled }, { "mode", cfg.mode }, { "toggleKey", cfg.toggleKey }, { "threshold", cfg.threshold }, { "seconds", cfg.seconds },
 				{ "chance", { { "fists", cfg.chanceFists }, { "blunt", cfg.chanceBlunt }, { "bladed", cfg.chanceBladed } } },
 				{ "levels", { { "big", cfg.levelBig }, { "great", cfg.levelGreat }, { "huge", cfg.levelHuge } } }, { "slotLimit", cfg.slotLimit } } } };
+		const auto wr = [](const ClassAI& ai) { return json{ { "aggression", ai.aggression }, { "confidence", ai.confidence }, { "assistance", ai.assistance } }; };
+		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		std::ofstream(kFile) << j.dump(2);
 	}
 }

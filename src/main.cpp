@@ -7,6 +7,7 @@
 #include "PCH.h"
 #include "Config.h"
 #include "Subdue.h"
+#include "Pets.h"
 
 namespace
 {
@@ -30,6 +31,7 @@ namespace
 			try {
 				Config::Load();
 				Subdue::Init();
+				Pets::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}
