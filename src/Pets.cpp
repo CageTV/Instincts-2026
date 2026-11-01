@@ -163,6 +163,9 @@ namespace Pets
 				if (!actor || actor.get() == player || actor->IsDead() || !IsInstinctsPet(actor.get())) {
 					continue;
 				}
+				if (actor->IsInCombat()) {
+					continue;  // the engine raises aggression / drops confidence mid-fight (a hurt animal flees): leave that alone, put the class values back afterwards
+				}
 				if (const auto* sp = SpeciesOf(actor.get())) {
 					Apply(actor.get(), *sp);
 				}
