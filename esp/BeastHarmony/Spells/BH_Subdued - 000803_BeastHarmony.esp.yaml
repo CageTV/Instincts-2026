@@ -1,0 +1,19 @@
+FormKey: 000803:BeastHarmony.esp
+EditorID: BH_Subdued
+Name:
+  TargetLanguage: English
+  Value: Subdued
+Flags:
+- ManualCostCalc
+- IgnoreResistance
+- NoAbsorbOrReflect
+CastType: FireAndForget
+TargetType: Self
+Effects:
+- BaseEffect: 000801:BeastHarmony.esp
+  Data:
+    Duration: 60
+- BaseEffect: 000802:BeastHarmony.esp
+  Data:
+    Magnitude: 100
+    Duration: 60

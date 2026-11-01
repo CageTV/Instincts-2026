@@ -1,0 +1,14 @@
+SpriggitSource:
+  PackageName: Spriggit.Yaml.Skyrim
+  Version: 0.41
+ModKey: BeastHarmony.esp
+GameRelease: SkyrimSE
+ModHeader:
+  Flags:
+  - Small
+  Author: CageTV
+  Description: "Records for Beast Harmony (BeastHarmony.dll) - the knocked-out state of a tamable animal."
+  MasterReferences:
+  - Master: Skyrim.esm
+    FileSize: 0
+  INTV: 1

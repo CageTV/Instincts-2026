@@ -1,0 +1,23 @@
+FormKey: 000801:BeastHarmony.esp
+EditorID: BH_SubduedParalysis
+Name:
+  TargetLanguage: English
+  Value: Knocked Out
+Flags:
+- Recover
+- NoMagnitude
+- NoArea
+- NoHitEffect
+- NoDeathDispel
+BaseCost: 0
+MagicSkill: Alteration
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: Paralysis
+  Type: Paralysis
+CastType: FireAndForget
+TargetType: Self
+DualCastScale: 1
+Description:
+  TargetLanguage: English
+  Value: The animal is knocked out and helpless.
