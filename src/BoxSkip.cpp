@@ -7,6 +7,7 @@
 #include "PCH.h"
 #include "BoxSkip.h"
 #include "Config.h"
+#include "Subdue.h"
 
 namespace BoxSkip
 {
@@ -124,5 +125,48 @@ namespace BoxSkip
 		REL::Relocation<std::uintptr_t> vtbl{ RE::VTABLE_MessageBoxMenu[0] };
 		g_original = vtbl.write_vfunc(0x4, reinterpret_cast<std::uintptr_t>(&Thunk));
 		SKSE::log::info("activation box skip: hooked MessageBoxMenu::ProcessMessage (original {:X})", g_original);
+	}
+
+	namespace
+	{
+		using GetActivateText_t = bool (*)(RE::TESNPC*, RE::TESObjectREFR*, RE::BSString&);
+		std::uintptr_t g_origText = 0;
+
+		bool TextThunk(RE::TESNPC* a_base, RE::TESObjectREFR* a_activator, RE::BSString& a_dst)
+		{
+			const bool had = reinterpret_cast<GetActivateText_t>(g_origText)(a_base, a_activator, a_dst);
+			try {
+				if (had || !Config::GetBox().label || !a_activator || a_activator != RE::PlayerCharacter::GetSingleton()) {
+					return had;
+				}
+				const auto* pick = RE::CrosshairPickData::GetSingleton();
+				const auto  target = pick ? pick->GetActiveTarget().get() : nullptr;
+				auto*       actor = target ? target->As<RE::Actor>() : nullptr;
+				if (!actor || actor->GetActorBase() != a_base || !Subdue::QualifiesForTaming(actor)) {
+					return had;
+				}
+				a_dst = "Attempt to Tame";
+				static int logged = 0;
+				if (logged < 5) {
+					++logged;
+					SKSE::log::info("hover label: 'Attempt to Tame' shown for {}", actor->GetName() ? actor->GetName() : "?");
+				}
+				return true;
+			} catch (const std::exception& e) {
+				SKSE::log::error("hover label hook: {}", e.what());
+				return had;
+			}
+		}
+	}
+
+	void InitLabel()
+	{
+		if (!Config::GetBox().label) {
+			SKSE::log::info("hover label: off in config");
+			return;
+		}
+		REL::Relocation<std::uintptr_t> vtbl{ RE::VTABLE_TESNPC[0] };
+		g_origText = vtbl.write_vfunc(0x4C, reinterpret_cast<std::uintptr_t>(&TextThunk));
+		SKSE::log::info("hover label: hooked TESNPC::GetActivateText (original {:X})", g_origText);
 	}
 }

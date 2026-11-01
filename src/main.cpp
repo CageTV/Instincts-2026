@@ -34,6 +34,7 @@ namespace
 				Subdue::Init();
 				Pets::Init();
 				BoxSkip::Init();
+				BoxSkip::InitLabel();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}

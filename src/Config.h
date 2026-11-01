@@ -50,6 +50,7 @@ namespace Config
 	{
 		bool skip = true;     // hide the box and run "Attempt to Tame" directly
 		int  delayFrames = 3; // frames to wait between hiding the box and opening the feeding menu
+		bool label = true;    // show "Attempt to Tame" under the crosshair on wild animals that can be tamed
 	};
 
 	Subdue& Get();

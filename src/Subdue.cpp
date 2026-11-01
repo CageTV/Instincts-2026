@@ -27,6 +27,8 @@ namespace Subdue
 			RE::BGSListForm*    originalRaces = nullptr;
 			RE::BGSListForm*    powers = nullptr;
 			RE::TESGlobal*      petCount = nullptr;
+			RE::TESGlobal*      limit = nullptr;       // Instincts' ConfigsTamingHealthLimit
+			std::unordered_set<const RE::TESRace*> docile;  // species Instincts lets you tame at any health (feeding)
 			bool                ok = false;
 		} F;
 
@@ -272,6 +274,21 @@ namespace Subdue
 		KeySink keySink;
 	}
 
+	bool QualifiesForTaming(RE::Actor* a_actor)
+	{
+		if (!F.ok || !a_actor || a_actor->IsDead() || a_actor->IsPlayerTeammate() || PowerOf(a_actor) < 0) {
+			return false;
+		}
+		const float maxHp = MaxHealth(a_actor);
+		if (maxHp <= 0.0f) {
+			return false;
+		}
+		const float hp = a_actor->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
+		const float limit = F.limit ? F.limit->value : 0.25f;
+		const bool  low = hp / maxHp < limit || hp <= 10.0f;
+		return low || F.docile.contains(a_actor->GetRace());
+	}
+
 	void Init()
 	{
 		auto* dh = RE::TESDataHandler::GetSingleton();
@@ -284,6 +301,14 @@ namespace Subdue
 		F.originalRaces = dh->LookupForm<RE::BGSListForm>(0x023FD8, kInstincts);
 		F.powers = dh->LookupForm<RE::BGSListForm>(0x0519C2, kInstincts);
 		F.petCount = dh->LookupForm<RE::TESGlobal>(0x00FB4F, kInstincts);
+		F.limit = dh->LookupForm<RE::TESGlobal>(0x05BC0C, kInstincts);
+		struct Docile { std::uint32_t local; std::string_view file; };
+		for (const auto& d : { Docile{ 0x0A919D, "Skyrim.esm"sv }, Docile{ 0x04E785, "Skyrim.esm"sv }, Docile{ 0x0CF89B, "Skyrim.esm"sv }, Docile{ 0x00D0B2, "Dawnguard.esm"sv },
+				 Docile{ 0x0131ED, "Skyrim.esm"sv }, Docile{ 0x109C7C, "Skyrim.esm"sv }, Docile{ 0x0131FA, "Skyrim.esm"sv }, Docile{ 0x06DC99, "Skyrim.esm"sv } }) {
+			if (const auto* race = dh->LookupForm<RE::TESRace>(d.local, d.file)) {
+				F.docile.insert(race);
+			}
+		}
 		F.ok = F.spell && F.paralysis && F.rolled && F.originalRaces && F.powers;
 		SKSE::log::info("Beast Harmony: BeastHarmony.esp {}, Instincts lists {}", (F.spell && F.paralysis && F.rolled) ? "found" : "NOT FOUND", (F.originalRaces && F.powers) ? "found" : "NOT FOUND");
 		if (!F.ok) {
