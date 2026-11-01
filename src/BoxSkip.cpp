@@ -80,13 +80,16 @@ namespace BoxSkip
 			const auto result = reinterpret_cast<ProcessMessage_t>(g_original)(a_menu, a_message);
 			if (cb) {
 				try {
-					SKSE::log::info("activation box: hiding it and running choice 0 in {} frames", cfg.delayFrames);
-					if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
-						queue->AddMessage(RE::InterfaceStrings::GetSingleton()->messageBoxMenu, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-					}
+					SKSE::log::info("activation box: running choice 0 while the box is still open, then hiding it (in {} frames)", cfg.delayFrames);
+					// ORDER MATTERS: the choice list the callback reads exists only while the box is open (hiding the box clears it - running the
+					// choice after the hide crashed in the engine, 2026-11-01). So run choice 0 first, then close the box.
 					AfterFrames(std::max(1, cfg.delayFrames), [cb]() {
 						SKSE::log::info("activation box: running choice 0 (Attempt to Tame)");
 						cb->Run(0);
+						SKSE::log::info("activation box: choice 0 returned, hiding the box");
+						if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
+							queue->AddMessage(RE::InterfaceStrings::GetSingleton()->messageBoxMenu, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+						}
 					});
 				} catch (const std::exception& e) {
 					SKSE::log::error("activation box hook (run): {}", e.what());
