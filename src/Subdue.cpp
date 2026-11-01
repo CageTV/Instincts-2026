@@ -160,7 +160,9 @@ namespace Subdue
 			}
 			if (subdued) {
 				// a knocked-out animal cannot be finished off by stray hits: keep it at the knock-out health
-				const float floor = maxHp * c.threshold;
+				// Instincts only offers "Attempt to Tame" on a dangerous animal while its health is STRICTLY below the taming limit (or <= 10 HP),
+				// so the floor must sit clearly under the threshold: exactly at the threshold gave a big animal (wolf, bear) no taming prompt at all.
+				const float floor = maxHp * c.threshold * 0.6f;
 				if (hp < floor && hp > 0.0f) {
 					t->AsActorValueOwner()->RestoreActorValue(RE::ActorValue::kHealth, floor - hp);
 					SKSE::log::info("{}: knocked out, stray hit, health put back to {:.0f}", t->GetName() ? t->GetName() : "?", floor);
