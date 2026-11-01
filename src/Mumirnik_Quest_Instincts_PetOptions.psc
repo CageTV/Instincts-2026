@@ -74,6 +74,12 @@ Int Property BigPower = 6 Auto
 { An animal of this power or more takes 2 slots. }
 Int Property HugePower = 10 Auto
 { An animal of this power or more takes 3 slots. }
+Int Property LevelBig = 20 Auto
+{ Player level needed to tame an animal of BigPower (6) or more. }
+Int Property LevelGreat = 30 Auto
+{ Player level needed to tame an animal of power 8 or more. }
+Int Property LevelHuge = 40 Auto
+{ Player level needed to tame an animal of HugePower (10) or more. }
 
 ;-- Functions ---------------------------------------
 
@@ -125,6 +131,11 @@ Bool Function CheckPowerBudget(Actor akTarget)
   If currentPetPower + power > currentPetPowerMax ; #DEBUG_LINE_NO:120
     PetPowerCheckFAILED.Show(currentPetPower as Float, currentPetPowerMax as Float, power as Float, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) ; #DEBUG_LINE_NO:121
     Return False ; #DEBUG_LINE_NO:122
+  EndIf
+  Int needLevel = Self.LevelNeededForPower(power)
+  If PlayerREF.GetLevel() < needLevel
+    Debug.Notification("You are not experienced enough to tame this animal (level " + needLevel + ").")
+    Return False
   EndIf
   Int cost = Self.SlotCostForPower(power)
   Self.SyncPetCount()
@@ -323,6 +334,30 @@ Int Function GetHugePower()
     Return 10
   EndIf
   Return HugePower
+EndFunction
+
+Int Function LevelNeededForPower(Int aiPower)
+{ Player level needed: nothing for ordinary animals, more and more for the strong ones. }
+  Int big = LevelBig
+  Int great = LevelGreat
+  Int huge = LevelHuge
+  If big < 1
+    big = 20
+  EndIf
+  If great < 1
+    great = 30
+  EndIf
+  If huge < 1
+    huge = 40
+  EndIf
+  If aiPower >= Self.GetHugePower()
+    Return huge
+  ElseIf aiPower >= 8
+    Return great
+  ElseIf aiPower >= Self.GetBigPower()
+    Return big
+  EndIf
+  Return 0
 EndFunction
 
 Int Function SlotCostForPower(Int aiPower)

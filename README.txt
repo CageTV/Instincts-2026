@@ -11,3 +11,5 @@ Instincts - Fixes (for Instincts - Animal Taming in Skyrim 1.1.6, Nexus 63224, b
      themselves each time, so it cannot drift. The Taming perk's "PetCount < 3" and the Summon spell's "PetCount > 0" conditions still read right.
    - A line in Papyrus.0.log ("[Instincts+] tamed ... / released ...") for every taming and release.
 Needs only Instincts itself. Remove the folder and everything is as Kheree made it (pets made meanwhile keep working: the count is recomputed).
+   - Level gate: the player needs level 20 for power 6-7 animals (bears, sabre cats, chaurus), 30 for power 8-9, 40 for power 10 (mammoth) -
+     LevelBig / LevelGreat / LevelHuge properties. Ordinary animals (wolf, fox, deer, ...) have no gate.
