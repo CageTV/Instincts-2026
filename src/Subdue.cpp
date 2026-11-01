@@ -127,6 +127,14 @@ namespace Subdue
 			return rng;
 		}
 
+		// Actor's MagicTarget base sits at a different offset per runtime (0x98 / 0xA0), so a direct t->HasMagicEffect() passes a wrong this on some builds
+		// (CTD on 1.7.104, 2026-11-01). Always go through the virtual GetMagicTarget(), which returns the right pointer on every runtime.
+		bool HasEffect(RE::Actor* a_actor, RE::EffectSetting* a_effect)
+		{
+			auto* mt = a_actor ? a_actor->GetMagicTarget() : nullptr;
+			return mt && a_effect && mt->HasMagicEffect(a_effect);
+		}
+
 		void Note(const std::string& a_text) { RE::SendHUDMessage::ShowHUDMessage(a_text.c_str()); }
 
 		float MaxHealth(RE::Actor* a_actor) { return a_actor->AsActorValueOwner()->GetPermanentActorValue(RE::ActorValue::kHealth); }
@@ -146,7 +154,7 @@ namespace Subdue
 				return;
 			}
 			const auto& c = Config::Get();
-			const bool  subdued = IsDowned(a_id) && t->HasMagicEffect(F.paralysis);
+			const bool  subdued = IsDowned(a_id) && HasEffect(t, F.paralysis);
 			if (!subdued) {
 				SetDowned(a_id, false);
 			}
@@ -202,7 +210,7 @@ namespace Subdue
 				Note("The " + name + " is knocked out.");
 				SKSE::GetTaskInterface()->AddTask([a_id, name]() {
 					auto* again = RE::TESForm::LookupByID<RE::Actor>(a_id);
-					SKSE::log::info("{}: after the spell, knocked-out effect {}, health {:.0f}", name, again && F.paralysis && again->HasMagicEffect(F.paralysis) ? "ACTIVE" : "NOT active",
+					SKSE::log::info("{}: after the spell, knocked-out effect {}, health {:.0f}", name, again && F.paralysis && HasEffect(again, F.paralysis) ? "ACTIVE" : "NOT active",
 						again ? again->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth) : -1.0f);
 				});
 			} else {
