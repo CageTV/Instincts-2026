@@ -8,6 +8,7 @@
 #include "Config.h"
 #include "Subdue.h"
 #include "Pets.h"
+#include "BoxSkip.h"
 
 namespace
 {
@@ -32,6 +33,7 @@ namespace
 				Config::Load();
 				Subdue::Init();
 				Pets::Init();
+				BoxSkip::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}

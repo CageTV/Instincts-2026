@@ -45,8 +45,16 @@ namespace Config
 		ClassAI producer{ 0, 0, 0 };
 	};
 
+	// the "What would you like to do? Attempt to Tame / Activate" box of Instincts' Taming perk
+	struct Box
+	{
+		bool skip = true;     // hide the box and run "Attempt to Tame" directly
+		int  delayFrames = 3; // frames to wait between hiding the box and opening the feeding menu
+	};
+
 	Subdue& Get();
 	Pets&   GetPets();
+	Box&    GetBox();
 	void    Load();
 	void    Save();
 }
