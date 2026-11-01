@@ -38,6 +38,19 @@ namespace BoxSkip
 			return *reinterpret_cast<const std::uintptr_t*>(a_cb) == vtbl.address();
 		}
 
+		// A callback that does nothing. One permanent reference is held here, so the count never reaches zero and the engine never frees
+		// (with its own allocator) an object this DLL allocated.
+		struct NoopCallback : RE::IMessageBoxCallback
+		{
+			void Run(std::uint8_t) override {}
+		};
+
+		RE::BSTSmartPointer<RE::IMessageBoxCallback>& Noop()
+		{
+			static RE::BSTSmartPointer<RE::IMessageBoxCallback> keep{ new NoopCallback() };
+			return keep;
+		}
+
 		// the pending activation-choice box, read from the engine's message-box queue (the show message itself carries no data)
 		RE::BSTSmartPointer<RE::IMessageBoxCallback> FindPendingChoiceBox(std::string& a_firstLabel, std::size_t& a_queueSize)
 		{
@@ -53,6 +66,9 @@ namespace BoxSkip
 				a_firstLabel = first ? first : "";
 				if (a_firstLabel == kLabel) {
 					found = d->callback;
+					// The engine ALSO runs the box's callback when the box is closed, and the choice list is gone after our own run: that second run
+					// crashed (CTD 15:14 and 15:30, 2026-11-01). Give the box a do-nothing callback so only our run counts.
+					d->callback = Noop();
 					break;
 				}
 			}
