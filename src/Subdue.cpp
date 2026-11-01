@@ -8,7 +8,9 @@
 #include "Subdue.h"
 #include "Config.h"
 
+#include <mutex>
 #include <random>
+#include <unordered_set>
 
 namespace Subdue
 {
@@ -29,6 +31,23 @@ namespace Subdue
 		} F;
 
 		bool tamingMode = false;
+		std::unordered_set<RE::FormID> downedSet;  // animals this plugin knocked out
+		std::mutex                     downedLock;    // the hit event can arrive on any thread
+
+		bool IsDowned(RE::FormID a_id)
+		{
+			std::scoped_lock l(downedLock);
+			return downedSet.contains(a_id);
+		}
+		void SetDowned(RE::FormID a_id, bool a_on)
+		{
+			std::scoped_lock l(downedLock);
+			if (a_on) {
+				downedSet.insert(a_id);
+			} else {
+				downedSet.erase(a_id);
+			}
+		}
 
 		enum class Weapon { None, Fists, Blunt, Bladed };
 
@@ -117,7 +136,8 @@ namespace Subdue
 		{
 			auto* t = RE::TESForm::LookupByID<RE::Actor>(a_id);
 			auto* player = RE::PlayerCharacter::GetSingleton();
-			if (!t || !player || t->IsDead() || t->IsPlayerTeammate()) {
+			if (!t || !player || t->IsDead() || t->IsPlayerTeammate() || !t->Is3DLoaded() || !t->GetMagicTarget()) {
+				SetDowned(a_id, false);
 				return;
 			}
 			const float hp = t->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
@@ -126,7 +146,10 @@ namespace Subdue
 				return;
 			}
 			const auto& c = Config::Get();
-			const bool  subdued = t->HasMagicEffect(F.paralysis);
+			const bool  subdued = IsDowned(a_id) && t->HasMagicEffect(F.paralysis);
+			if (!subdued) {
+				SetDowned(a_id, false);
+			}
 			if (subdued) {
 				// a knocked-out animal cannot be finished off by stray hits: keep it at the knock-out health
 				const float floor = maxHp * c.threshold;
@@ -166,6 +189,7 @@ namespace Subdue
 				if (auto* caster = t->GetMagicCaster(RE::MagicSystem::CastingSource::kInstant)) {
 					caster->CastSpellImmediate(F.spell, false, t, 1.0f, false, 0.0f, nullptr);
 				}
+				SetDowned(a_id, true);
 				Note("The " + name + " is knocked out.");
 			} else {
 				t->AsActorValueOwner()->DamageActorValue(RE::ActorValue::kHealth, hp + 1.0f);
@@ -177,27 +201,21 @@ namespace Subdue
 		{
 			RE::BSEventNotifyControl ProcessEvent(const RE::TESHitEvent* a_event, RE::BSTEventSource<RE::TESHitEvent>*) override
 			{
-				if (!a_event || !a_event->target || !a_event->cause || !F.ok) {
+				// Runs for every hit in the game, also while a save is loading and NPCs fight each other: nothing here may call into the actor.
+				// It only looks at ids and the event's own fields; the real work is queued for the next frame.
+				if (!a_event || !a_event->target || !F.ok) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
-				auto* target = a_event->target->As<RE::Actor>();
-				if (!target || a_event->cause.get() != RE::PlayerCharacter::GetSingleton()) {
-					// anything may hit a knocked-out animal: the floor applies to every hit
-					if (target && F.paralysis && target->HasMagicEffect(F.paralysis)) {
-						const auto id = target->GetFormID();
-						SKSE::GetTaskInterface()->AddTask([id]() { Decide(id, Weapon::Bladed); });
-					}
+				const auto id = a_event->target->GetFormID();
+				const bool byPlayer = a_event->cause && a_event->cause.get() == RE::PlayerCharacter::GetSingleton();
+				const bool isDowned = IsDowned(id);
+				if (!isDowned && !(byPlayer && ModeOn())) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
-				const bool subdued = F.paralysis && target->HasMagicEffect(F.paralysis);
-				if (!subdued && !ModeOn()) {
+				const auto w = byPlayer ? Classify(a_event) : Weapon::Bladed;
+				if (w == Weapon::None && !isDowned) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
-				const auto w = Classify(a_event);
-				if (w == Weapon::None && !subdued) {
-					return RE::BSEventNotifyControl::kContinue;
-				}
-				const auto id = target->GetFormID();
 				SKSE::GetTaskInterface()->AddTask([id, w]() { Decide(id, w); });
 				return RE::BSEventNotifyControl::kContinue;
 			}
