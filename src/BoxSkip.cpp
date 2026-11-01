@@ -43,6 +43,23 @@ namespace BoxSkip
 			const auto result = reinterpret_cast<ProcessMessage_t>(g_original)(a_menu, a_message);
 			try {
 				const auto& cfg = Config::GetBox();
+				{
+					// diagnostics: every message the box menu receives (a handful per box), so a box that is not caught can be explained
+					static int logged = 0;
+					if (logged < 60) {
+						++logged;
+						std::string buttons;
+						bool        isChoice = false;
+						if (a_message.data && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
+							auto* d = static_cast<RE::MessageBoxData*>(a_message.data);
+							isChoice = IsActivateChoiceCallback(d->callback.get());
+							for (auto& b : d->buttonText) {
+								buttons += std::format("[{}]", b.c_str() ? b.c_str() : "?");
+							}
+						}
+						SKSE::log::info("MessageBoxMenu message type {} data {} activateChoiceCallback {} buttons {}", static_cast<std::uint32_t>(a_message.type.get()), a_message.data ? "yes" : "none", isChoice, buttons);
+					}
+				}
 				if (!cfg.skip || a_message.type != RE::UI_MESSAGE_TYPE::kShow || !a_message.data) {
 					return result;
 				}
