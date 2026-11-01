@@ -155,8 +155,13 @@ namespace Subdue
 				const float floor = maxHp * c.threshold;
 				if (hp < floor && hp > 0.0f) {
 					t->AsActorValueOwner()->RestoreActorValue(RE::ActorValue::kHealth, floor - hp);
+					SKSE::log::info("{}: knocked out, stray hit, health put back to {:.0f}", t->GetName() ? t->GetName() : "?", floor);
 				}
 				return;
+			}
+			if (PowerOf(t) >= 0) {
+				SKSE::log::info("hit on {}: {:.0f}% health, weapon {}, knocked out {}, already decided {}", t->GetName() ? t->GetName() : "?", 100.0f * hp / maxHp, WeaponName(a_weapon), subdued ? "yes" : "no",
+					t->IsInFaction(F.rolled) ? "yes" : "no");
 			}
 			if (hp <= 0.0f || hp / maxHp > c.threshold || t->IsInFaction(F.rolled)) {
 				return;  // not low enough yet, or already decided
@@ -191,6 +196,11 @@ namespace Subdue
 				}
 				SetDowned(a_id, true);
 				Note("The " + name + " is knocked out.");
+				SKSE::GetTaskInterface()->AddTask([a_id, name]() {
+					auto* again = RE::TESForm::LookupByID<RE::Actor>(a_id);
+					SKSE::log::info("{}: after the spell, knocked-out effect {}, health {:.0f}", name, again && F.paralysis && again->HasMagicEffect(F.paralysis) ? "ACTIVE" : "NOT active",
+						again ? again->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth) : -1.0f);
+				});
 			} else {
 				t->AsActorValueOwner()->DamageActorValue(RE::ActorValue::kHealth, hp + 1.0f);
 				Note("The " + name + " dies of the blow.");
