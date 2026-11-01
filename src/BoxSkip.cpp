@@ -38,50 +38,59 @@ namespace BoxSkip
 			return *reinterpret_cast<const std::uintptr_t*>(a_cb) == vtbl.address();
 		}
 
+		// the pending activation-choice box, read from the engine's message-box queue (the show message itself carries no data)
+		RE::BSTSmartPointer<RE::IMessageBoxCallback> FindPendingChoiceBox(std::string& a_firstLabel, std::size_t& a_queueSize)
+		{
+			RE::BSTSmartPointer<RE::IMessageBoxCallback> found;
+			RE::BSSpinLockGuard                            lock(RE::MessageBoxMenu::GetQueueLock());
+			auto&                                        queue = RE::MessageBoxMenu::GetQueue();
+			a_queueSize = queue.size();
+			for (auto* d : queue) {
+				if (!d || d->buttonText.empty() || !IsActivateChoiceCallback(d->callback.get())) {
+					continue;
+				}
+				const char* first = d->buttonText[0].c_str();
+				a_firstLabel = first ? first : "";
+				if (a_firstLabel == kLabel) {
+					found = d->callback;
+					break;
+				}
+			}
+			return found;
+		}
+
 		RE::UI_MESSAGE_RESULTS Thunk(RE::MessageBoxMenu* a_menu, RE::UIMessage& a_message)
 		{
-			const auto result = reinterpret_cast<ProcessMessage_t>(g_original)(a_menu, a_message);
+			RE::BSTSmartPointer<RE::IMessageBoxCallback> cb;
+			const auto&                                  cfg = Config::GetBox();
 			try {
-				const auto& cfg = Config::GetBox();
-				{
-					// diagnostics: every message the box menu receives (a handful per box), so a box that is not caught can be explained
+				if (cfg.skip && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
+					std::string  label;
+					std::size_t  queued = 0;
+					cb = FindPendingChoiceBox(label, queued);
 					static int logged = 0;
-					if (logged < 60) {
+					if (logged < 40) {
 						++logged;
-						std::string buttons;
-						bool        isChoice = false;
-						if (a_message.data && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
-							auto* d = static_cast<RE::MessageBoxData*>(a_message.data);
-							isChoice = IsActivateChoiceCallback(d->callback.get());
-							for (auto& b : d->buttonText) {
-								buttons += std::format("[{}]", b.c_str() ? b.c_str() : "?");
-							}
-						}
-						SKSE::log::info("MessageBoxMenu message type {} data {} activateChoiceCallback {} buttons {}", static_cast<std::uint32_t>(a_message.type.get()), a_message.data ? "yes" : "none", isChoice, buttons);
+						SKSE::log::info("message box shown: {} box(es) queued, activation choice '{}' {}", queued, label, cb ? "FOUND" : "not found");
 					}
 				}
-				if (!cfg.skip || a_message.type != RE::UI_MESSAGE_TYPE::kShow || !a_message.data) {
-					return result;
-				}
-				auto* data = static_cast<RE::MessageBoxData*>(a_message.data);
-				if (!IsActivateChoiceCallback(data->callback.get()) || data->buttonText.empty()) {
-					return result;
-				}
-				const char* first = data->buttonText[0].c_str();
-				if (!first || std::string_view(first) != kLabel) {
-					return result;  // some other activation choice box (another mod's perk): leave it alone
-				}
-				RE::BSTSmartPointer<RE::IMessageBoxCallback> cb = data->callback;
-				SKSE::log::info("activation box '{}' ({} buttons): hiding it and running choice 0 in {} frames", first, data->buttonText.size(), cfg.delayFrames);
-				if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
-					queue->AddMessage(RE::InterfaceStrings::GetSingleton()->messageBoxMenu, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-				}
-				AfterFrames(std::max(1, cfg.delayFrames), [cb]() {
-					SKSE::log::info("activation box: running choice 0 (Attempt to Tame)");
-					cb->Run(0);
-				});
 			} catch (const std::exception& e) {
-				SKSE::log::error("activation box hook: {}", e.what());
+				SKSE::log::error("activation box hook (find): {}", e.what());
+			}
+			const auto result = reinterpret_cast<ProcessMessage_t>(g_original)(a_menu, a_message);
+			if (cb) {
+				try {
+					SKSE::log::info("activation box: hiding it and running choice 0 in {} frames", cfg.delayFrames);
+					if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
+						queue->AddMessage(RE::InterfaceStrings::GetSingleton()->messageBoxMenu, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+					}
+					AfterFrames(std::max(1, cfg.delayFrames), [cb]() {
+						SKSE::log::info("activation box: running choice 0 (Attempt to Tame)");
+						cb->Run(0);
+					});
+				} catch (const std::exception& e) {
+					SKSE::log::error("activation box hook (run): {}", e.what());
+				}
 			}
 			return result;
 		}
