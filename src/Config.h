@@ -78,6 +78,8 @@ namespace Config
 		int   maxItems = 3;        // plants picked per trip
 		float gameHours = 1.0f;    // the pet stays away at least this many game hours
 		float arriveRadius = 150.0f;
+		bool  sound = true;        // the animal makes its own sound when it is back
+		float soundVolume = 1.0f;  // 0..1
 	};
 
 	Subdue& Get();

@@ -1,0 +1,8 @@
+FormKey: 00080A:BeastHarmony.esp
+EditorID: BH_PetDone_Goat
+Category: 0172A1:Skyrim.esm
+OutputModel: 07F80C:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\goat_bleat.wav
+Type: Standard
+Priority: 128

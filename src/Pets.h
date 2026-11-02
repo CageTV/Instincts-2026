@@ -13,4 +13,7 @@ namespace Pets
 
 	// The class name of a tamed Instincts animal ("fighter", "scavenger", "gatherer", "producer"), or "" if the actor is not one. Game thread only.
 	std::string ClassOf(RE::Actor* a_actor);
+
+	// The species name of a tamed Instincts animal ("fox", "wolf", "hare" ...), or "" if unknown. Game thread only.
+	std::string SpeciesNameOf(RE::Actor* a_actor);
 }

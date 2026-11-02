@@ -215,4 +215,13 @@ namespace Pets
 		const auto* sp = SpeciesOf(a_actor);
 		return sp ? ClassName(sp->cls) : std::string{};
 	}
+
+	std::string SpeciesNameOf(RE::Actor* a_actor)
+	{
+		if (!S.ok || !a_actor || !IsInstinctsPet(a_actor)) {
+			return {};
+		}
+		const auto* sp = SpeciesOf(a_actor);
+		return sp ? std::string(sp->name) : std::string{};
+	}
 }

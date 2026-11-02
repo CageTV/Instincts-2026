@@ -13,6 +13,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <map>
+#include <random>
 #include <chrono>
 #include <cmath>
 #include <format>
@@ -145,9 +147,49 @@ namespace Jobs
 			return now > had || harvested;
 		}
 
+		// the animal's own "task done" sound (generated with ElevenLabs, records BH_PetDone_* in BeastHarmony.esp, files in Data/Sound/FX/BeastHarmony)
+		void PlayDone(RE::Actor* a_pet)
+		{
+			if (!Config::GetJobs().sound || !a_pet) {
+				return;
+			}
+			static const std::map<std::string, std::vector<std::uint32_t>> kSounds = {
+				{ "fox", { 0x804 } }, { "snow fox", { 0x804 } },
+				{ "wolf", { 0x805, 0x806, 0x807 } }, { "ice wolf", { 0x805, 0x806, 0x807 } },  // the dog family has several
+				{ "hare", { 0x808 } }, { "deer", { 0x809 } }, { "glow deer", { 0x809 } }, { "elk", { 0x809 } }, { "goat", { 0x80A } }, { "chicken", { 0x80B } },
+			};
+			const auto species = Pets::SpeciesNameOf(a_pet);
+			const auto it = kSounds.find(species);
+			if (it == kSounds.end()) {
+				return;
+			}
+			static std::mt19937 rng{ std::random_device{}() };
+			const auto          id = it->second[std::uniform_int_distribution<std::size_t>(0, it->second.size() - 1)(rng)];
+			auto*               dh = RE::TESDataHandler::GetSingleton();
+			auto*               form = dh ? dh->LookupForm<RE::BGSSoundDescriptorForm>(id, "BeastHarmony.esp"sv) : nullptr;
+			auto*               am = RE::BSAudioManager::GetSingleton();
+			if (!form || !form->soundDescriptor || !am) {
+				SKSE::log::warn("jobs: sound record {:X} not found", id);
+				return;
+			}
+			RE::BSSoundHandle handle;
+			if (!am->GetSoundHandle(handle, form->soundDescriptor)) {
+				SKSE::log::warn("jobs: could not build the sound {:X}", id);
+				return;
+			}
+			handle.SetPosition(a_pet->GetPosition());
+			if (auto* node = a_pet->Get3D()) {
+				handle.SetObjectToFollow(node);
+			}
+			handle.SetVolume(Config::GetJobs().soundVolume);
+			handle.Play();
+			SKSE::log::info("jobs: {} makes its {} sound ({:X})", a_pet->GetName() ? a_pet->GetName() : "?", species, id);
+		}
+
 		void Finish(Job& j, const char* a_why)
 		{
 			ReleaseAll(j);
+			PlayDone(RE::TESForm::LookupByID<RE::Actor>(j.pet));
 			SKSE::log::info("jobs: {} [{:08X}] trip over ({}), {} picked", j.name, j.pet, a_why, j.picked);
 			Note(std::format("{} is back{}.", j.name, j.picked ? std::format(" with {} item(s)", j.picked) : std::string(" empty-handed")));
 		}

@@ -85,6 +85,8 @@ namespace Config
 			jobs.maxItems = std::clamp(jb.value("maxItems", jobs.maxItems), 1, 12);
 			jobs.gameHours = std::clamp(jb.value("gameHours", jobs.gameHours), 0.0f, 24.0f);
 			jobs.arriveRadius = std::clamp(jb.value("arriveRadius", jobs.arriveRadius), 75.0f, 600.0f);
+			jobs.sound = jb.value("sound", jobs.sound);
+			jobs.soundVolume = std::clamp(jb.value("soundVolume", jobs.soundVolume), 0.0f, 1.0f);
 		} catch (const std::exception& e) {
 			SKSE::log::warn("config.json unreadable ({}), using defaults", e.what());
 		}
@@ -102,7 +104,7 @@ namespace Config
 		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
 		j["diet"] = { { "enabled", diet.enabled } };
-		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius } };
+		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius }, { "sound", jobs.sound }, { "soundVolume", jobs.soundVolume } };
 		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "modifier", spike.modifier }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);
 	}
