@@ -286,7 +286,8 @@ namespace Subdue
 		const float hp = a_actor->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealth);
 		const float limit = F.limit ? F.limit->value : 0.25f;
 		const bool  low = hp / maxHp < limit || hp <= 10.0f;
-		return low || F.docile.contains(a_actor->GetRace());
+		// every species has to be hurt first (docile ones too: the Instincts - Fixes plugin gates their choice the same way)
+		return low;
 	}
 
 	void Init()
