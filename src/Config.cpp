@@ -75,10 +75,12 @@ namespace Config
 			const auto sj = j.value("spike", json::object());
 			spike.enabled = sj.value("enabled", spike.enabled);
 			spike.key = sj.value("key", spike.key);
+			spike.modifier = sj.value("modifier", spike.modifier);
 			spike.distance = std::clamp(sj.value("distance", spike.distance), 100.0f, 3000.0f);
 			const auto jb = j.value("jobs", json::object());
 			jobs.enabled = jb.value("enabled", jobs.enabled);
 			jobs.key = jb.value("key", jobs.key);
+			jobs.modifier = jb.value("modifier", jobs.modifier);
 			jobs.range = std::clamp(jb.value("range", jobs.range), 300.0f, 8000.0f);
 			jobs.maxItems = std::clamp(jb.value("maxItems", jobs.maxItems), 1, 12);
 			jobs.gameHours = std::clamp(jb.value("gameHours", jobs.gameHours), 0.0f, 24.0f);
@@ -100,8 +102,8 @@ namespace Config
 		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
 		j["diet"] = { { "enabled", diet.enabled } };
-		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius } };
-		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "distance", spike.distance } };
+		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius } };
+		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "modifier", spike.modifier }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);
 	}
 }

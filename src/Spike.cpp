@@ -8,6 +8,7 @@
 #include "Spike.h"
 #include "APMF_API.h"
 #include "Config.h"
+#include "Keys.h"
 
 #include <chrono>
 #include <cmath>
@@ -144,7 +145,7 @@ namespace Spike
 				}
 				for (auto* e = *a_events; e; e = e->next) {
 					const auto* b = e->AsButtonEvent();
-					if (b && b->IsDown() && b->GetDevice() == RE::INPUT_DEVICE::kKeyboard && static_cast<int>(b->GetIDCode()) == Config::GetSpike().key) {
+					if (b && b->IsDown() && b->GetDevice() == RE::INPUT_DEVICE::kKeyboard && static_cast<int>(b->GetIDCode()) == Config::GetSpike().key && Keys::ModifierHeld(Config::GetSpike().modifier)) {
 						auto* ui = RE::UI::GetSingleton();
 						if (ui && !ui->GameIsPaused()) {
 							SKSE::GetTaskInterface()->AddTask([]() { Start(); });

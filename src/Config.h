@@ -64,6 +64,7 @@ namespace Config
 	{
 		bool  enabled = false;
 		int   key = 0x42;       // DirectInput scan code (0x42 = F8)
+		int   modifier = 0;     // 0 = none; 42 left shift, 29 left ctrl, 56 left alt
 		float distance = 600.0f;
 	};
 
@@ -71,7 +72,8 @@ namespace Config
 	struct Jobs
 	{
 		bool  enabled = false;
-		int   key = 0x43;          // DirectInput scan code (0x43 = F9)
+		int   key = 0x0B;          // DirectInput scan code (0x0B = the 0 key; F2 = 60, F3 = 61; NOT F5/F9, the game uses them)
+		int   modifier = 0;        // 0 = none; 42 left shift, 29 left ctrl, 56 left alt
 		float range = 2800.0f;     // game units from the pet it may roam to find plants (40 m)
 		int   maxItems = 3;        // plants picked per trip
 		float gameHours = 1.0f;    // the pet stays away at least this many game hours
