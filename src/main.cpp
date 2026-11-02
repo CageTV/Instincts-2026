@@ -12,6 +12,7 @@
 #include "Diet.h"
 #include "HudFilter.h"
 #include "Spike.h"
+#include "Jobs.h"
 
 namespace
 {
@@ -41,6 +42,7 @@ namespace
 				Diet::Init();
 				HudFilter::Init();
 				Spike::Init();
+				Jobs::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}
