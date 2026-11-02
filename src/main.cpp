@@ -11,6 +11,7 @@
 #include "BoxSkip.h"
 #include "Diet.h"
 #include "HudFilter.h"
+#include "Spike.h"
 
 namespace
 {
@@ -39,6 +40,7 @@ namespace
 				BoxSkip::InitLabel();
 				Diet::Init();
 				HudFilter::Init();
+				Spike::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}

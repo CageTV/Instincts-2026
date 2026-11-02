@@ -59,10 +59,19 @@ namespace Config
 		bool enabled = true;
 	};
 
+	// Harbinger test (see Spike.h): off by default
+	struct Spike
+	{
+		bool  enabled = false;
+		int   key = 0x42;       // DirectInput scan code (0x42 = F8)
+		float distance = 600.0f;
+	};
+
 	Subdue& Get();
 	Pets&   GetPets();
 	Box&    GetBox();
 	Diet&   GetDiet();
+	Spike&  GetSpike();
 	void    Load();
 	void    Save();
 }

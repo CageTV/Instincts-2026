@@ -18,6 +18,7 @@ namespace Config
 		Pets   pets;
 		Box    box;
 		Diet   diet;
+		Spike  spike;
 		const auto kFile = std::filesystem::path("Data/SKSE/Plugins/BeastHarmony/config.json");
 	}
 
@@ -25,6 +26,7 @@ namespace Config
 	Pets&   GetPets() { return pets; }
 	Box&    GetBox() { return box; }
 	Diet&   GetDiet() { return diet; }
+	Spike&  GetSpike() { return spike; }
 
 	void Load()
 	{
@@ -68,6 +70,10 @@ namespace Config
 			box.delayFrames = std::clamp(bj.value("delayFrames", box.delayFrames), 1, 30);
 			box.label = bj.value("label", box.label);
 			diet.enabled = j.value("diet", json::object()).value("enabled", diet.enabled);
+			const auto sj = j.value("spike", json::object());
+			spike.enabled = sj.value("enabled", spike.enabled);
+			spike.key = sj.value("key", spike.key);
+			spike.distance = std::clamp(sj.value("distance", spike.distance), 100.0f, 3000.0f);
 		} catch (const std::exception& e) {
 			SKSE::log::warn("config.json unreadable ({}), using defaults", e.what());
 		}
@@ -85,6 +91,7 @@ namespace Config
 		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
 		j["diet"] = { { "enabled", diet.enabled } };
+		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);
 	}
 }
