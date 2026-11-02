@@ -17,12 +17,14 @@ namespace Config
 		Subdue cfg;
 		Pets   pets;
 		Box    box;
+		Diet   diet;
 		const auto kFile = std::filesystem::path("Data/SKSE/Plugins/BeastHarmony/config.json");
 	}
 
 	Subdue& Get() { return cfg; }
 	Pets&   GetPets() { return pets; }
 	Box&    GetBox() { return box; }
+	Diet&   GetDiet() { return diet; }
 
 	void Load()
 	{
@@ -65,6 +67,7 @@ namespace Config
 			box.skip = bj.value("skip", box.skip);
 			box.delayFrames = std::clamp(bj.value("delayFrames", box.delayFrames), 1, 30);
 			box.label = bj.value("label", box.label);
+			diet.enabled = j.value("diet", json::object()).value("enabled", diet.enabled);
 		} catch (const std::exception& e) {
 			SKSE::log::warn("config.json unreadable ({}), using defaults", e.what());
 		}
@@ -81,6 +84,7 @@ namespace Config
 		const auto wr = [](const ClassAI& ai) { return json{ { "aggression", ai.aggression }, { "confidence", ai.confidence }, { "assistance", ai.assistance } }; };
 		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
+		j["diet"] = { { "enabled", diet.enabled } };
 		std::ofstream(kFile) << j.dump(2);
 	}
 }

@@ -53,9 +53,16 @@ namespace Config
 		bool label = true;    // show "Attempt to Tame" under the crosshair on wild animals that can be tamed
 	};
 
+	// what the tamed animals accept as food (Instincts' food lists are trimmed at game load)
+	struct Diet
+	{
+		bool enabled = true;
+	};
+
 	Subdue& Get();
 	Pets&   GetPets();
 	Box&    GetBox();
+	Diet&   GetDiet();
 	void    Load();
 	void    Save();
 }

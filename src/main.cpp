@@ -9,6 +9,7 @@
 #include "Subdue.h"
 #include "Pets.h"
 #include "BoxSkip.h"
+#include "Diet.h"
 
 namespace
 {
@@ -35,6 +36,7 @@ namespace
 				Pets::Init();
 				BoxSkip::Init();
 				BoxSkip::InitLabel();
+				Diet::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}
