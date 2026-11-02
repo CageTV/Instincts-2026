@@ -3,7 +3,7 @@
 Instincts decays each pet's Hunger (0..100, higher = better fed) once per game hour in Mumirnik_Quest_Instincts_PetStats.UpdatePetStatsGameTime. Food only
 counted when the player opened the feeding menu. Now, right after that hourly decay, a pet whose Hunger is at or below AutoEatBelow (default 50) eats
 food from its own inventory: items its species accepts (the same food list the feeding menu uses), one at a time through Instincts' own ReceiveFood
-(eat sound, hunger gain, message, item removed), up to AutoEatMaxMeals per hour or until it is above the line. A pet in combat does not eat.
+(eat sound, hunger gain, message, item removed), up to AutoEatMaxMeals per hour or until it reaches AutoEatUntil (70 = Satisfied). A pet in combat does not eat.
 Set AutoEatBelow to 0 to switch it off.
 
 Reads reference/mumirnik_quest_instincts_petstats.psc, writes src/Mumirnik_Quest_Instincts_PetStats.psc.
@@ -26,7 +26,9 @@ swap("Message[] Property PetStatisticsMessageM Auto\n",
      "Message[] Property PetStatisticsMessageM Auto\n"
      "Float Property AutoEatBelow = 50.0 Auto\n"
      "{ A pet at or below this Hunger (0-100) eats food from its own inventory once per game hour. 0 = never. }\n"
-     "Int Property AutoEatMaxMeals = 3 Auto\n"
+     "Float Property AutoEatUntil = 70.0 Auto\n"
+     "{ Once it starts, a pet keeps eating until its Hunger reaches this (70 = Satisfied, 90 = Well Fed). }\n"
+     "Int Property AutoEatMaxMeals = 5 Auto\n"
      "{ Most food items a pet eats in one go. }\n")
 
 swap("  Self.ModHunger(akTarget, -hungerDecay) ; #DEBUG_LINE_NO:61\n",
@@ -53,7 +55,10 @@ swap("Function SetHunger(Actor akTarget, Float aiValue)\n",
      "    Return\n"
      "  EndIf\n"
      "  Int meals = 0\n"
-     "  While meals < AutoEatMaxMeals && akTarget.GetActorValue(HungerAVName) <= AutoEatBelow\n"
+     "  If akTarget.GetActorValue(HungerAVName) > AutoEatBelow\n"
+     "    Return\n"
+     "  EndIf\n"
+     "  While meals < AutoEatMaxMeals && akTarget.GetActorValue(HungerAVName) < AutoEatUntil\n"
      "    Form food = None\n"
      "    Int i = akTarget.GetNumItems()\n"
      "    While i > 0 && food == None\n"

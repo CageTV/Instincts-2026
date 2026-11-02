@@ -15,6 +15,6 @@ Needs only Instincts itself. Remove the folder and everything is as Kheree made 
      LevelBig / LevelGreat / LevelHuge properties. Ordinary animals (wolf, fox, deer, ...) have no gate.
    - Taming progress is remembered: a failed attempt keeps its accumulated chance for the same animal for 120 real seconds (RememberSeconds property),
      counted from the last feeding. A different animal or a longer pause starts again from 0; a success resets it. (tools/patch_taming_memory.py)
-   - Pets eat food from their own inventory: once per game hour, right after the hunger decay, a pet at or below Hunger 50 (AutoEatBelow property) eats
+   - Pets eat food from their own inventory: once per game hour, right after the hunger decay, a pet at or below Hunger 50 (AutoEatBelow) eats until Satisfied, Hunger 70 (AutoEatUntil):
      food its species accepts (the feeding menu's list), one item at a time via Instincts' own ReceiveFood, up to 3 per hour (AutoEatMaxMeals), not in combat.
      AutoEatBelow = 0 switches it off. (Mumirnik_Quest_Instincts_PetStats, tools/patch_autoeat.py)

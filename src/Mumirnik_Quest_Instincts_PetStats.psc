@@ -24,7 +24,9 @@ Message[] Property PetStatisticsMessageF Auto
 Message[] Property PetStatisticsMessageM Auto
 Float Property AutoEatBelow = 50.0 Auto
 { A pet at or below this Hunger (0-100) eats food from its own inventory once per game hour. 0 = never. }
-Int Property AutoEatMaxMeals = 3 Auto
+Float Property AutoEatUntil = 70.0 Auto
+{ Once it starts, a pet keeps eating until its Hunger reaches this (70 = Satisfied, 90 = Well Fed). }
+Int Property AutoEatMaxMeals = 5 Auto
 { Most food items a pet eats in one go. }
 
 ;-- Functions ---------------------------------------
@@ -97,7 +99,10 @@ Function AutoEat(Actor akTarget)
     Return
   EndIf
   Int meals = 0
-  While meals < AutoEatMaxMeals && akTarget.GetActorValue(HungerAVName) <= AutoEatBelow
+  If akTarget.GetActorValue(HungerAVName) > AutoEatBelow
+    Return
+  EndIf
+  While meals < AutoEatMaxMeals && akTarget.GetActorValue(HungerAVName) < AutoEatUntil
     Form food = None
     Int i = akTarget.GetNumItems()
     While i > 0 && food == None
