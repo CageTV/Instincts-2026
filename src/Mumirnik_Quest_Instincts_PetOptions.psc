@@ -4,6 +4,8 @@ ScriptName Mumirnik_Quest_Instincts_PetOptions Extends Quest
 ;-- Variables ---------------------------------------
 Actor AnimalToTame
 Float TameChance = 0.0
+Actor RememberedAnimal
+Float RememberedAt = 0.0
 Bool TimerIsRunning = False
 
 ;-- Properties --------------------------------------
@@ -68,6 +70,8 @@ Message[] Property TamedMessage Auto
 Sound Property TamedSound Auto
 Bool Property UsePerkBasedPowerBudget = False Auto
 
+Float Property RememberSeconds = 120.0 Auto
+{ A failed taming attempt keeps its accumulated chance for this many real seconds (counted from the last feeding) for the same animal. }
 Int Property SlotLimit = 3 Auto
 { Total pet slots (a big animal takes more than one). Was a hard-coded 3. }
 Int Property BigPower = 6 Auto
@@ -151,6 +155,12 @@ EndFunction
 
 Function TryMakePet(Actor akTarget, Float aiValue)
 { This is called from the taming feature. It is a thread safe way to make a target your pet. }
+  Float now = Utility.GetCurrentRealTime()
+  If akTarget != RememberedAnimal || now < RememberedAt || now - RememberedAt > RememberSeconds
+    TameChance = 0.0 ; another animal, a long pause, or a new session: start from nothing
+  EndIf
+  RememberedAnimal = akTarget
+  RememberedAt = now
   AnimalToTame = akTarget ; #DEBUG_LINE_NO:135
   TameChance += aiValue ; #DEBUG_LINE_NO:136
   ChanceToTame.Show(TameChance, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) ; #DEBUG_LINE_NO:137
@@ -161,11 +171,12 @@ Event OnUpdate()
   If AnimalToTame ; #DEBUG_LINE_NO:142
     If Utility.RandomInt(0, 99) as Float < TameChance ; #DEBUG_LINE_NO:143
       Self.MakePet(AnimalToTame) ; #DEBUG_LINE_NO:144
+      TameChance = 0.0
+      RememberedAnimal = None
     Else
       ChanceToTameFAILED.Show(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) ; #DEBUG_LINE_NO:146
     EndIf
     AnimalToTame = None ; #DEBUG_LINE_NO:148
-    TameChance = 0.0 ; #DEBUG_LINE_NO:149
   EndIf
 EndEvent
 

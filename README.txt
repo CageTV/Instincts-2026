@@ -13,3 +13,5 @@ Instincts - Fixes (for Instincts - Animal Taming in Skyrim 1.1.6, Nexus 63224, b
 Needs only Instincts itself. Remove the folder and everything is as Kheree made it (pets made meanwhile keep working: the count is recomputed).
    - Level gate: the player needs level 20 for power 6-7 animals (bears, sabre cats, chaurus), 30 for power 8-9, 40 for power 10 (mammoth) -
      LevelBig / LevelGreat / LevelHuge properties. Ordinary animals (wolf, fox, deer, ...) have no gate.
+   - Taming progress is remembered: a failed attempt keeps its accumulated chance for the same animal for 120 real seconds (RememberSeconds property),
+     counted from the last feeding. A different animal or a longer pause starts again from 0; a success resets it. (tools/patch_taming_memory.py)
