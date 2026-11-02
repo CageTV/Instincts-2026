@@ -76,11 +76,31 @@ namespace BoxSkip
 			return found;
 		}
 
+		// The box's second button is the plain "Activate" choice, and the hover-label hook gives it the same text as the first ("Attempt to Tame").
+		// Rename it "Cancel": pressing it runs the normal activation, which does nothing to a wild animal, so it works as a way out.
+		void RenameSecondButton()
+		{
+			RE::BSSpinLockGuard lock(RE::MessageBoxMenu::GetQueueLock());
+			for (auto* d : RE::MessageBoxMenu::GetQueue()) {
+				if (!d || d->buttonText.size() < 2 || !IsActivateChoiceCallback(d->callback.get())) {
+					continue;
+				}
+				const char* first = d->buttonText[0].c_str();
+				const char* second = d->buttonText[1].c_str();
+				if (first && second && std::string_view(first) == kLabel && std::string_view(second) == kLabel) {
+					d->buttonText[1] = "Cancel";
+				}
+			}
+		}
+
 		RE::UI_MESSAGE_RESULTS Thunk(RE::MessageBoxMenu* a_menu, RE::UIMessage& a_message)
 		{
 			RE::BSTSmartPointer<RE::IMessageBoxCallback> cb;
 			const auto&                                  cfg = Config::GetBox();
 			try {
+				if (!cfg.skip && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
+					RenameSecondButton();
+				}
 				if (cfg.skip && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
 					std::string  label;
 					std::size_t  queued = 0;
@@ -118,9 +138,9 @@ namespace BoxSkip
 
 	void Init()
 	{
+		// the hook is always installed: with skip off it only renames the second button to "Cancel"
 		if (!Config::GetBox().skip) {
-			SKSE::log::info("activation box skip: off in config");
-			return;
+			SKSE::log::info("activation box skip: off in config (box stays open, second button renamed Cancel)");
 		}
 		REL::Relocation<std::uintptr_t> vtbl{ RE::VTABLE_MessageBoxMenu[0] };
 		g_original = vtbl.write_vfunc(0x4, reinterpret_cast<std::uintptr_t>(&Thunk));
