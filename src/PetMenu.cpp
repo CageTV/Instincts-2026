@@ -8,6 +8,9 @@
 #include "PetMenu.h"
 #include "Jobs.h"
 #include "Pets.h"
+#include "Config.h"
+
+#include "SkyPrompt/API.hpp"
 
 #include <format>
 
@@ -34,6 +37,150 @@ namespace PetMenu
 			vm->DispatchMethodCall(handle, "Actor", "SetDoingFavor", args, none);
 		}
 
+		// carries out a chosen command on the game thread
+		void Perform(Action a_act, RE::FormID a_id)
+		{
+			SKSE::GetTaskInterface()->AddTask([a_act, a_id]() {
+				auto* actor = RE::TESForm::LookupByID<RE::Actor>(a_id);
+				if (!actor) {
+					return;
+				}
+				switch (a_act) {
+				case Action::Gather:
+					Jobs::Gather(actor);
+					break;
+				case Action::Favor:
+					StartFavor(actor);
+					break;
+				default:
+					break;
+				}
+			});
+		}
+
+		std::vector<Action> ActionsFor(RE::Actor* a_pet)
+		{
+			std::vector<Action> out;
+			const std::string   cls = Pets::ClassOf(a_pet);
+			if (cls == "gatherer" || cls == "scavenger") {
+				out.push_back(Action::Gather);
+			}
+			out.push_back(Action::Favor);
+			out.push_back(Action::Nothing);
+			return out;
+		}
+
+		const char* Label(Action a_act)
+		{
+			switch (a_act) {
+			case Action::Gather:
+				return "Gather what you can find";
+			case Action::Favor:
+				return "Something else";
+			default:
+				return "Never mind";
+			}
+		}
+
+		// ---- SkyPrompt ----
+		struct PromptSink : SkyPromptAPI::PromptSink
+		{
+			SkyPromptAPI::ClientID                                                     client = 0;
+			RE::FormID                                                                 pet = 0;
+			std::uint32_t                                                              serial = 0;  // which showing this is (timeouts of an older one do nothing)
+			std::vector<Action>                                                        actions;
+			std::vector<std::string>                                                   texts;
+			std::vector<std::vector<std::pair<RE::INPUT_DEVICE, SkyPromptAPI::ButtonID>>> keys;
+			std::vector<SkyPromptAPI::Prompt>                                          prompts;
+
+			void ProcessEvent(SkyPromptAPI::PromptEvent a_event) const override
+			{
+				if (a_event.type != SkyPromptAPI::PromptEventType::kAccepted) {
+					return;
+				}
+				const auto idx = a_event.prompt.actionID;
+				const auto act = idx < actions.size() ? actions[idx] : Action::Nothing;
+				const auto id = pet;
+				SKSE::log::info("menu: prompt {} accepted for pet {:08X}", idx, id);
+				SKSE::GetTaskInterface()->AddTask([act, id]() {
+					Hide();
+					Perform(act, id);
+				});
+			}
+
+			std::span<const SkyPromptAPI::Prompt> GetPrompts() const override { return prompts; }
+
+			static PromptSink& Get()
+			{
+				static PromptSink s;
+				return s;
+			}
+
+			static void Hide()
+			{
+				auto& me = Get();
+				if (me.client) {
+					SkyPromptAPI::RemovePrompt(&me, me.client);
+				}
+				me.prompts.clear();
+				++me.serial;
+			}
+		};
+
+		bool ShowPrompts(RE::FormID a_pet)
+		{
+			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
+			if (!pet) {
+				return false;
+			}
+			auto& me = PromptSink::Get();
+			if (!me.client) {
+				me.client = SkyPromptAPI::RequestClientID();
+				if (!me.client) {
+					SKSE::log::warn("menu: SkyPrompt gave no client id (not installed or an incompatible version), using a message box");
+					return false;
+				}
+				SKSE::log::info("menu: SkyPrompt client id {}", me.client);
+			}
+			PromptSink::Hide();
+			const auto& cfg = Config::GetMenu();
+			me.pet = a_pet;
+			me.actions = ActionsFor(pet);
+			me.texts.clear();
+			me.keys.clear();
+			me.prompts.clear();
+			const int scan[3] = { cfg.keyGather, cfg.keyOther, cfg.keyCancel };
+			for (std::size_t i = 0; i < me.actions.size(); ++i) {
+				// the last entry is always "Never mind", the first Gather when it exists
+				const int code = me.actions[i] == Action::Gather ? scan[0] : (me.actions[i] == Action::Favor ? scan[1] : scan[2]);
+				me.texts.push_back(Label(me.actions[i]));
+				me.keys.push_back({ { RE::INPUT_DEVICE::kKeyboard, static_cast<SkyPromptAPI::ButtonID>(code) } });
+			}
+			for (std::size_t i = 0; i < me.actions.size(); ++i) {
+				me.prompts.emplace_back(me.texts[i], static_cast<SkyPromptAPI::EventID>(1), static_cast<SkyPromptAPI::ActionID>(i), SkyPromptAPI::PromptType::kSinglePress, a_pet,
+					std::span<const std::pair<RE::INPUT_DEVICE, SkyPromptAPI::ButtonID>>(me.keys[i]));
+			}
+			if (!SkyPromptAPI::SendPrompt(&me, me.client)) {
+				SKSE::log::warn("menu: SkyPrompt refused the prompts, using a message box");
+				me.prompts.clear();
+				return false;
+			}
+			const auto ser = ++me.serial;
+			const auto secs = cfg.seconds;
+			std::thread([ser, secs]() {
+				std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(secs * 1000.0f)));
+				SKSE::GetTaskInterface()->AddTask([ser]() {
+					if (PromptSink::Get().serial == ser && !PromptSink::Get().prompts.empty()) {
+						SKSE::log::info("menu: prompts timed out");
+						PromptSink::Hide();
+					}
+				});
+			}).detach();
+			SKSE::log::info("menu: {} SkyPrompt prompts shown for {} [{:08X}] (keys {:#x} {:#x} {:#x}, {:.0f} s)", me.actions.size(), pet->GetName() ? pet->GetName() : "pet", a_pet,
+				cfg.keyGather, cfg.keyOther, cfg.keyCancel, secs);
+			return true;
+		}
+
 		struct Choice : RE::IMessageBoxCallback
 		{
 			RE::FormID          pet = 0;
@@ -44,28 +191,11 @@ namespace PetMenu
 				if (a_button >= actions.size()) {
 					return;
 				}
-				const auto act = actions[a_button];
-				const auto id = pet;
-				SKSE::GetTaskInterface()->AddTask([act, id]() {
-					auto* actor = RE::TESForm::LookupByID<RE::Actor>(id);
-					if (!actor) {
-						return;
-					}
-					switch (act) {
-					case Action::Gather:
-						Jobs::Gather(actor);
-						break;
-					case Action::Favor:
-						StartFavor(actor);
-						break;
-					default:
-						break;
-					}
-				});
+				Perform(actions[a_button], pet);
 			}
 		};
 
-		void Show(RE::FormID a_pet)
+		void ShowBox(RE::FormID a_pet)
 		{
 			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
 			auto* queue = RE::UIMessageQueue::GetSingleton();
@@ -101,6 +231,26 @@ namespace PetMenu
 			SKSE::log::info("menu: list queued for {} [{:08X}] (class '{}'), {} buttons", name, a_pet, cls, cb->actions.size());
 		}
 
+		// the dialogue that called Open is still on screen for a moment; the prompts / box are shown once it has closed
+		void Show(RE::FormID a_pet, int a_tries)
+		{
+			auto* ui = RE::UI::GetSingleton();
+			if (ui && ui->IsMenuOpen(RE::DialogueMenu::MENU_NAME) && a_tries < 40) {
+				std::thread([a_pet, a_tries]() {
+					std::this_thread::sleep_for(std::chrono::milliseconds(150));
+					SKSE::GetTaskInterface()->AddTask([a_pet, a_tries]() { Show(a_pet, a_tries + 1); });
+				}).detach();
+				return;
+			}
+			if (a_tries > 0) {
+				SKSE::log::info("menu: dialogue closed after {} checks", a_tries);
+			}
+			if (Config::GetMenu().useSkyPrompt && ShowPrompts(a_pet)) {
+				return;
+			}
+			ShowBox(a_pet);
+		}
+
 		void Open(RE::StaticFunctionTag*, RE::Actor* a_pet)
 		{
 			SKSE::log::info("menu: Open called from Papyrus (pet {:08X})", a_pet ? a_pet->GetFormID() : 0);
@@ -108,7 +258,7 @@ namespace PetMenu
 				return;
 			}
 			const auto id = a_pet->GetFormID();
-			SKSE::GetTaskInterface()->AddTask([id]() { Show(id); });
+			SKSE::GetTaskInterface()->AddTask([id]() { Show(id, 0); });
 		}
 
 	}

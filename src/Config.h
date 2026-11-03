@@ -83,12 +83,23 @@ namespace Config
 		float soundVolume = 1.0f;  // 0..1
 	};
 
+	// the pet command list ("Do something for me"): SkyPrompt prompts when SkyPrompt is installed, else a message box
+	struct Menu
+	{
+		bool  useSkyPrompt = true;
+		int   keyGather = 0x2C;   // DirectInput scan codes: 0x2C = Z, 0x2D = X, 0x2E = C
+		int   keyOther = 0x2D;
+		int   keyCancel = 0x2E;
+		float seconds = 20.0f;    // the prompts go away by themselves after this long
+	};
+
 	Subdue& Get();
 	Pets&   GetPets();
 	Box&    GetBox();
 	Diet&   GetDiet();
 	Spike&  GetSpike();
 	Jobs&   GetJobs();
+	Menu&   GetMenu();
 	void    Load();
 	void    Save();
 }

@@ -20,6 +20,7 @@ namespace Config
 		Diet   diet;
 		Spike  spike;
 		Jobs   jobs;
+		Menu   menu;
 		const auto kFile = std::filesystem::path("Data/SKSE/Plugins/BeastHarmony/config.json");
 	}
 
@@ -29,6 +30,7 @@ namespace Config
 	Diet&   GetDiet() { return diet; }
 	Spike&  GetSpike() { return spike; }
 	Jobs&   GetJobs() { return jobs; }
+	Menu&   GetMenu() { return menu; }
 
 	void Load()
 	{
@@ -88,6 +90,12 @@ namespace Config
 			jobs.arriveRadius = std::clamp(jb.value("arriveRadius", jobs.arriveRadius), 75.0f, 600.0f);
 			jobs.sound = jb.value("sound", jobs.sound);
 			jobs.soundVolume = std::clamp(jb.value("soundVolume", jobs.soundVolume), 0.0f, 1.0f);
+			const auto mj = j.value("menu", json::object());
+			menu.useSkyPrompt = mj.value("useSkyPrompt", menu.useSkyPrompt);
+			menu.keyGather = mj.value("keyGather", menu.keyGather);
+			menu.keyOther = mj.value("keyOther", menu.keyOther);
+			menu.keyCancel = mj.value("keyCancel", menu.keyCancel);
+			menu.seconds = std::clamp(mj.value("seconds", menu.seconds), 3.0f, 120.0f);
 		} catch (const std::exception& e) {
 			SKSE::log::warn("config.json unreadable ({}), using defaults", e.what());
 		}
@@ -106,6 +114,7 @@ namespace Config
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
 		j["diet"] = { { "enabled", diet.enabled } };
 		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius }, { "sound", jobs.sound }, { "soundVolume", jobs.soundVolume } };
+		j["menu"] = { { "useSkyPrompt", menu.useSkyPrompt }, { "keyGather", menu.keyGather }, { "keyOther", menu.keyOther }, { "keyCancel", menu.keyCancel }, { "seconds", menu.seconds } };
 		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "modifier", spike.modifier }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);
 	}
