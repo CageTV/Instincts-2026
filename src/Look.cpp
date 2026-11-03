@@ -54,6 +54,17 @@ namespace Look
 			}
 			const auto* petRace = pet->GetRace();
 			int         copied = 0;
+			{
+				const auto* wb = wild->GetActorBase();
+				const auto* ws = wb ? wb->skin : nullptr;
+				const auto* pb = pet->GetActorBase();
+				const auto* ps = pb ? pb->skin : nullptr;
+				const auto* wf = wb ? wb->GetFile(0) : nullptr;
+				const auto* wsf = ws ? ws->GetFile(0) : nullptr;
+				SKSE::log::info("look: wild {:08X} race {} base {:08X} ({}, from {}) skin {:08X} (from {}); pet base {:08X} skin {:08X}, pet race {}", a_wild,
+					wild->GetRace() ? wild->GetRace()->GetFormEditorID() : "?", wb ? wb->GetFormID() : 0, wb && wb->GetName() ? wb->GetName() : "?", wf ? wf->GetFilename() : "?",
+					ws ? ws->GetFormID() : 0, wsf ? wsf->GetFilename() : "?", pb ? pb->GetFormID() : 0, ps ? ps->GetFormID() : 0, petRace ? petRace->GetFormEditorID() : "?");
+			}
 			const auto  inv = wild->GetInventory([](RE::TESBoundObject& a_obj) { return a_obj.IsArmor(); });
 			for (const auto& [obj, data] : inv) {
 				const auto* armor = obj ? obj->As<RE::TESObjectARMO>() : nullptr;
@@ -102,6 +113,25 @@ namespace Look
 			}
 		}
 
+		// what the pet really wears a moment after the copy (body slot and the whole worn inventory)
+		void LogWorn(RE::FormID a_pet)
+		{
+			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
+			if (!pet) {
+				return;
+			}
+			const auto  inv = pet->GetInventory([](RE::TESBoundObject& a_obj) { return a_obj.IsArmor(); });
+			std::string worn;
+			for (const auto& [obj, data] : inv) {
+				if (obj && data.second && data.second->IsWorn()) {
+					const auto* file = obj->GetFile(0);
+					worn += std::format(" {:08X}({})", obj->GetFormID(), file ? file->GetFilename() : "?");
+				}
+			}
+			const auto* body = pet->GetWornArmor(RE::BGSBipedObjectForm::BipedObjectSlot::kBody);
+			SKSE::log::info("look: pet {:08X} 3D {}, body slot wears {:08X}, worn items:{}", a_pet, pet->Is3DLoaded(), body ? body->GetFormID() : 0, worn.empty() ? " none" : worn);
+		}
+
 		void CopyLook(RE::StaticFunctionTag*, RE::Actor* a_wild, RE::Actor* a_pet)
 		{
 			SKSE::log::info("look: CopyLook called from Papyrus (wild {:08X}, pet {:08X})", a_wild ? a_wild->GetFormID() : 0, a_pet ? a_pet->GetFormID() : 0);
@@ -115,6 +145,10 @@ namespace Look
 				std::this_thread::sleep_for(std::chrono::milliseconds(800));
 				if (const auto* tasks = SKSE::GetTaskInterface()) {
 					tasks->AddTask([wild, pet] { Apply(wild, pet); });
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+				if (const auto* tasks = SKSE::GetTaskInterface()) {
+					tasks->AddTask([pet] { LogWorn(pet); });
 				}
 			}).detach();
 		}
