@@ -327,32 +327,15 @@ namespace Jobs
 			}).detach();
 		}
 
-		void Start()
+		// sends one pet out; returns true if it set out
+		bool StartFor(RE::Actor* pet, const std::string& cls)
 		{
-			auto*       player = RE::PlayerCharacter::GetSingleton();
-			const auto* pick = RE::CrosshairPickData::GetSingleton();
-			const auto  target = pick ? pick->GetActiveTarget().get() : nullptr;
-			auto*       pet = target ? target->As<RE::Actor>() : nullptr;
-			if (!player || !pet || pet == player) {
-				SKSE::log::info("jobs: aim the crosshair at your pet first");
-				return;
-			}
-			const std::string cls = Pets::ClassOf(pet);
 			const std::string name = pet->GetName() ? pet->GetName() : "Your pet";
-			if (cls.empty()) {
-				Note(name + " is not one of your pets.");
-				return;
-			}
-			if (cls != "gatherer" && cls != "scavenger") {
-				Note(name + " is a " + cls + " and does not gather.");
-				return;
-			}
 			if (std::ranges::any_of(g_jobs, [&](const Job& j) { return j.pet == pet->GetFormID(); })) {
-				Note(name + " is already out.");
-				return;
+				return false;
 			}
-			if (pet->IsInCombat() || !Connect()) {
-				return;
+			if (pet->IsInCombat() || pet->IsDead()) {
+				return false;
 			}
 			const auto& cfg = Config::GetJobs();
 			Job         j;
@@ -362,19 +345,52 @@ namespace Jobs
 			if (j.plants.empty()) {
 				Note(name + " finds nothing to gather nearby.");
 				SKSE::log::info("jobs: {} [{:08X}] found no plants within {:.0f} units", name, j.pet, cfg.range);
-				return;
+				return false;
 			}
 			j.startDays = RE::Calendar::GetSingleton() ? RE::Calendar::GetSingleton()->GetCurrentGameTime() : 0.0f;
 			j.legStart = std::chrono::steady_clock::now();
 			j.travel = WalkTo(j.pet, j.plants[0]);
 			if (!j.travel) {
 				SKSE::log::warn("jobs: Harbinger refused the first leg for {}", name);
-				return;
+				return false;
 			}
 			SKSE::log::info("jobs: {} [{:08X}] ({}) sets out for {} plant(s), staying away {:.2f} game hours", name, j.pet, cls, j.plants.size(), cfg.gameHours);
 			Note(std::format("{} sets out to gather.", name));
 			g_jobs.push_back(std::move(j));
 			StartTicker();
+			return true;
+		}
+
+		// one key: every tamed gatherer / scavenger near the player goes out for what its species can gather
+		void Start()
+		{
+			auto* player = RE::PlayerCharacter::GetSingleton();
+			auto* lists = RE::ProcessLists::GetSingleton();
+			if (!player || !lists || !Connect()) {
+				return;
+			}
+			int pets = 0;
+			int out = 0;
+			for (auto& handle : lists->highActorHandles) {
+				const auto actor = handle.get();
+				if (!actor || actor.get() == player) {
+					continue;
+				}
+				const std::string cls = Pets::ClassOf(actor.get());
+				if (cls != "gatherer" && cls != "scavenger") {
+					continue;
+				}
+				++pets;
+				if (StartFor(actor.get(), cls)) {
+					++out;
+				}
+			}
+			if (pets == 0) {
+				Note("None of your pets nearby can gather.");
+				SKSE::log::info("jobs: no tamed gatherer or scavenger is loaded near the player");
+			} else {
+				SKSE::log::info("jobs: {} of {} pet(s) set out", out, pets);
+			}
 		}
 
 		struct KeySink : RE::BSTEventSink<RE::InputEvent*>
@@ -406,7 +422,7 @@ namespace Jobs
 		}
 		if (auto* input = RE::BSInputDeviceManager::GetSingleton()) {
 			input->AddEventSink(&keySink);
-			SKSE::log::info("jobs: on, key {} starts a gather trip for the pet under the crosshair", Config::GetJobs().key);
+			SKSE::log::info("jobs: on, key {} sends every nearby gatherer / scavenger pet out to gather", Config::GetJobs().key);
 		}
 	}
 }
