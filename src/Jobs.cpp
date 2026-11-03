@@ -92,6 +92,22 @@ namespace Jobs
 			j.hold = 0;
 		}
 
+		// plants that give produce: flora (herbs, mushrooms) and trees/bushes (snowberries, juniper, the mod added berry bushes are TREE records)
+		const RE::TESProduceForm* ProduceOf(RE::TESObjectREFR* a_ref)
+		{
+			auto* base = a_ref ? a_ref->GetBaseObject() : nullptr;
+			if (!base) {
+				return nullptr;
+			}
+			if (const auto* flora = base->As<RE::TESFlora>()) {
+				return flora;
+			}
+			if (const auto* tree = base->As<RE::TESObjectTREE>()) {
+				return tree;
+			}
+			return nullptr;
+		}
+
 		bool IsGatherable(RE::TESObjectREFR* a_ref)
 		{
 			if (!a_ref || a_ref->IsDisabled() || a_ref->IsDeleted() || !a_ref->Is3DLoaded()) {
@@ -100,20 +116,27 @@ namespace Jobs
 			if (a_ref->GetFormFlags() & RE::TESObjectREFR::RecordFlags::kHarvested) {
 				return false;
 			}
-			const auto* flora = a_ref->GetBaseObject() ? a_ref->GetBaseObject()->As<RE::TESFlora>() : nullptr;
+			const auto* flora = ProduceOf(a_ref);
 			return flora && flora->produceItem;
 		}
 
 		std::vector<RE::FormID> FindPlants(RE::Actor* a_pet, float a_range, int a_max)
 		{
 			std::vector<std::pair<float, RE::FormID>> found;
+			int                                       withProduce = 0;  // refs that could give produce, whatever their state (for the log when nothing is found)
 			if (auto* tes = RE::TES::GetSingleton()) {
 				tes->ForEachReferenceInRange(a_pet, a_range, [&](RE::TESObjectREFR* a_ref) {
+					if (const auto* p = ProduceOf(a_ref); p && p->produceItem) {
+						++withProduce;
+					}
 					if (IsGatherable(a_ref)) {
 						found.emplace_back(a_ref->GetPosition().GetDistance(a_pet->GetPosition()), a_ref->GetFormID());
 					}
 					return RE::BSContainer::ForEachResult::kContinue;
 				});
+			}
+			if (found.empty()) {
+				SKSE::log::info("jobs: no gatherable plant in range; {} references with produce were seen (harvested, disabled or not loaded ones do not count)", withProduce);
 			}
 			std::ranges::sort(found);
 			std::vector<RE::FormID> out;
@@ -129,7 +152,7 @@ namespace Jobs
 		// the pet picks a plant: the engine's own activation, so the plant looks harvested and the produce lands in the pet's inventory
 		bool Pick(RE::Actor* a_pet, RE::TESObjectREFR* a_plant)
 		{
-			const auto* flora = a_plant->GetBaseObject() ? a_plant->GetBaseObject()->As<RE::TESFlora>() : nullptr;
+			const auto* flora = ProduceOf(a_plant);
 			if (!flora || !flora->produceItem) {
 				return false;
 			}
