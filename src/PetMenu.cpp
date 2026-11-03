@@ -70,6 +70,7 @@ namespace PetMenu
 			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
 			auto* queue = RE::UIMessageQueue::GetSingleton();
 			if (!pet || !queue) {
+				SKSE::log::warn("menu: cannot show the list (pet {:08X} found {}, message queue found {})", a_pet, pet != nullptr, queue != nullptr);
 				return;
 			}
 			const std::string cls = Pets::ClassOf(pet);
@@ -77,6 +78,7 @@ namespace PetMenu
 
 			auto* data = RE::UIMessageDataFactory::Create<RE::MessageBoxData>();
 			if (!data) {
+				SKSE::log::warn("menu: the game gave no message box data");
 				return;
 			}
 			auto* cb = new Choice();
@@ -96,10 +98,12 @@ namespace PetMenu
 			data->cancelButtonIndex = static_cast<std::int32_t>(cb->actions.size()) - 1;
 			data->isCancellable = true;
 			queue->AddMessage(RE::MessageBoxMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kShow, data);
+			SKSE::log::info("menu: list queued for {} [{:08X}] (class '{}'), {} buttons", name, a_pet, cls, cb->actions.size());
 		}
 
 		void Open(RE::StaticFunctionTag*, RE::Actor* a_pet)
 		{
+			SKSE::log::info("menu: Open called from Papyrus (pet {:08X})", a_pet ? a_pet->GetFormID() : 0);
 			if (!a_pet) {
 				return;
 			}

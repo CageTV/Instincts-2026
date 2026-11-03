@@ -79,6 +79,7 @@ namespace Look
 
 		void CopyLook(RE::StaticFunctionTag*, RE::Actor* a_wild, RE::Actor* a_pet)
 		{
+			SKSE::log::info("look: CopyLook called from Papyrus (wild {:08X}, pet {:08X})", a_wild ? a_wild->GetFormID() : 0, a_pet ? a_pet->GetFormID() : 0);
 			if (!a_wild || !a_pet) {
 				return;
 			}
