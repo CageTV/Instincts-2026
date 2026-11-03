@@ -268,6 +268,7 @@ Function MakePet(Actor akTarget)
   EndIf
   petActor.MoveTo(akTarget as ObjectReference, 0.0, 0.0, 0.0, True)
   PetREF[slot].ForceRefTo(petActor as ObjectReference)
+  BeastHarmony_Look.CopyLook(akTarget, petActor) ; Beast Harmony: the pet wears the wild animal's variant skin
   ; the pet exists and holds a slot: now the wild animal can go
   akTarget.SetAlpha(0.0, True)
   akTarget.SetCriticalStage(akTarget.CritStage_DisintegrateEnd)
