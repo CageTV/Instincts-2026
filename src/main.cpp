@@ -13,6 +13,7 @@
 #include "HudFilter.h"
 #include "Spike.h"
 #include "Jobs.h"
+#include "Look.h"
 
 namespace
 {
@@ -43,6 +44,7 @@ namespace
 				HudFilter::Init();
 				Spike::Init();
 				Jobs::Init();
+				Look::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}
@@ -56,5 +58,6 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	SetupLog();
 	SKSE::log::info("BeastHarmony 0.1.0, game {}", REL::Module::get().version().string());
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
+	Look::RegisterPapyrus();  // Papyrus functions have to be registered while the plugin loads, not at kDataLoaded
 	return true;
 }

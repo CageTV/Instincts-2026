@@ -57,6 +57,7 @@ namespace Config
 			const auto pj = j.value("pets", json::object());
 			pets.enabled = pj.value("enabled", pets.enabled);
 			pets.scanSeconds = pj.value("scanSeconds", pets.scanSeconds);
+			pets.copyLook = pj.value("copyLook", pets.copyLook);
 			const auto rd = [&](const char* name, ClassAI& ai) {
 				const auto o = pj.value(name, json::object());
 				ai.aggression = std::clamp(o.value("aggression", ai.aggression), 0, 3);
@@ -101,7 +102,7 @@ namespace Config
 				{ "chance", { { "fists", cfg.chanceFists }, { "blunt", cfg.chanceBlunt }, { "bladed", cfg.chanceBladed } } },
 				{ "levels", { { "big", cfg.levelBig }, { "great", cfg.levelGreat }, { "huge", cfg.levelHuge } } }, { "slotLimit", cfg.slotLimit } } } };
 		const auto wr = [](const ClassAI& ai) { return json{ { "aggression", ai.aggression }, { "confidence", ai.confidence }, { "assistance", ai.assistance } }; };
-		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
+		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "copyLook", pets.copyLook }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
 		j["diet"] = { { "enabled", diet.enabled } };
 		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius }, { "sound", jobs.sound }, { "soundVolume", jobs.soundVolume } };

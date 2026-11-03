@@ -39,6 +39,7 @@ namespace Config
 	{
 		bool    enabled = true;
 		float   scanSeconds = 2.0f;
+		bool    copyLook = true;  // the pet wears the wild animal's Dynamic Animal Variants skin
 		ClassAI fighter{ 1, 3, 2 };
 		ClassAI scavenger{ 1, 2, 1 };
 		ClassAI gatherer{ 0, 0, 0 };
