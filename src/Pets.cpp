@@ -144,6 +144,12 @@ namespace Pets
 				const int nowH = static_cast<int>(av->GetActorValue(RE::ActorValue::kAssistance));
 				SKSE::log::info("pet {} [{:08X}] = {} ({}): aggression/confidence/assistance was {}/{}/{}, wanted {}/{}/{}, now {}/{}/{}", a_pet->GetName() ? a_pet->GetName() : "?", a_pet->GetFormID(), sp.name,
 					ClassName(sp.cls), static_cast<int>(wasA), static_cast<int>(wasC), static_cast<int>(wasH), ai.aggression, ai.confidence, ai.assistance, nowA, nowC, nowH);
+				// read-only: what the pet really hits and takes (for balancing pets against the player)
+				const auto* player = RE::PlayerCharacter::GetSingleton();
+				SKSE::log::info("pet {} [{:08X}] strength: level {} (player {}), health {:.0f}/{:.0f}, unarmed damage {:.1f}, attack damage mult {:.2f}, damage resist {:.0f}, speed {:.0f}",
+					a_pet->GetName() ? a_pet->GetName() : "?", a_pet->GetFormID(), a_pet->GetLevel(), player ? player->GetLevel() : 0,
+					av->GetActorValue(RE::ActorValue::kHealth), av->GetBaseActorValue(RE::ActorValue::kHealth), av->GetActorValue(RE::ActorValue::kUnarmedDamage),
+					av->GetActorValue(RE::ActorValue::kAttackDamageMult), av->GetActorValue(RE::ActorValue::kDamageResist), av->GetActorValue(RE::ActorValue::kSpeedMult));
 			}
 		}
 
