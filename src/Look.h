@@ -12,5 +12,5 @@ namespace Look
 	// that name the matching wild race, and registers the Papyrus function BeastHarmony_Look.CopyLook(wild, pet).
 	void Init();
 	// While the plugin loads
-	void RegisterPapyrus();
+	bool Bind(RE::BSScript::IVirtualMachine* a_vm);
 }

@@ -32,6 +32,15 @@ namespace
 		spdlog::set_default_logger(std::move(log));
 	}
 
+	// one registration for every Papyrus function of the plugin
+	bool RegisterPapyrusFunctions(RE::BSScript::IVirtualMachine* a_vm)
+	{
+		Look::Bind(a_vm);
+		PetMenu::Bind(a_vm);
+		SKSE::log::info("papyrus: BeastHarmony_Look.CopyLook and BeastHarmony_Menu.Open registered");
+		return true;
+	}
+
 	void OnMessage(SKSE::MessagingInterface::Message* a_msg)
 	{
 		if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
@@ -59,7 +68,6 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	SetupLog();
 	SKSE::log::info("BeastHarmony 0.1.0, game {}", REL::Module::get().version().string());
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-	Look::RegisterPapyrus();
-	PetMenu::RegisterPapyrus();  // Papyrus functions have to be registered while the plugin loads, not at kDataLoaded
+	SKSE::GetPapyrusInterface()->Register(RegisterPapyrusFunctions);  // Papyrus functions have to be registered while the plugin loads, not at kDataLoaded
 	return true;
 }

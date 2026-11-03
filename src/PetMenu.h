@@ -10,5 +10,5 @@ namespace PetMenu
 {
 	// The "Do something for me" menu: a list of what the pet can do (Gather ...). It is opened by the Papyrus function
 	// BeastHarmony_Menu.Open(akPet), which the patched dialogue fragment of that topic calls. Register while the plugin loads.
-	void RegisterPapyrus();
+	bool Bind(RE::BSScript::IVirtualMachine* a_vm);
 }

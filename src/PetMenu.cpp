@@ -111,15 +111,11 @@ namespace PetMenu
 			SKSE::GetTaskInterface()->AddTask([id]() { Show(id); });
 		}
 
-		bool Register(RE::BSScript::IVirtualMachine* a_vm)
-		{
-			a_vm->RegisterFunction("Open", "BeastHarmony_Menu", Open);
-			return true;
-		}
 	}
 
-	void RegisterPapyrus()
+	bool Bind(RE::BSScript::IVirtualMachine* a_vm)
 	{
-		SKSE::GetPapyrusInterface()->Register(Register);
+		a_vm->RegisterFunction("Open", "BeastHarmony_Menu", Open);
+		return true;
 	}
 }

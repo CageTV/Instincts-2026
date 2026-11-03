@@ -57,6 +57,11 @@ namespace Look
 			const auto  inv = wild->GetInventory([](RE::TESBoundObject& a_obj) { return a_obj.IsArmor(); });
 			for (const auto& [obj, data] : inv) {
 				const auto* armor = obj ? obj->As<RE::TESObjectARMO>() : nullptr;
+				if (armor) {
+					const auto* file = armor->GetFile(0);
+					SKSE::log::info("look: the wild animal {:08X} carries {} ({:08X}, from {}), worn {}, a variant skin {}", a_wild, armor->GetName() ? armor->GetName() : "?", armor->GetFormID(),
+						file ? file->GetFilename() : "?", data.second && data.second->IsWorn(), FromVariants(armor));
+				}
 				if (!armor || !data.second || !data.second->IsWorn()) {
 					continue;
 				}
@@ -94,16 +99,12 @@ namespace Look
 			}).detach();
 		}
 
-		bool Register(RE::BSScript::IVirtualMachine* a_vm)
-		{
-			a_vm->RegisterFunction("CopyLook", "BeastHarmony_Look", CopyLook);
-			return true;
-		}
 	}
 
-	void RegisterPapyrus()
+	bool Bind(RE::BSScript::IVirtualMachine* a_vm)
 	{
-		SKSE::GetPapyrusInterface()->Register(Register);
+		a_vm->RegisterFunction("CopyLook", "BeastHarmony_Look", CopyLook);
+		return true;
 	}
 
 	void Init()
