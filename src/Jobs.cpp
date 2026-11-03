@@ -415,6 +415,19 @@ namespace Jobs
 		KeySink keySink;
 	}
 
+	bool Gather(RE::Actor* a_pet)
+	{
+		if (!a_pet || !Connect()) {
+			return false;
+		}
+		const std::string cls = Pets::ClassOf(a_pet);
+		if (cls != "gatherer" && cls != "scavenger") {
+			Note(std::string(a_pet->GetName() ? a_pet->GetName() : "Your pet") + " does not gather.");
+			return false;
+		}
+		return StartFor(a_pet, cls);
+	}
+
 	void Init()
 	{
 		if (!Config::GetJobs().enabled) {

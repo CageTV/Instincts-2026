@@ -14,6 +14,7 @@
 #include "Spike.h"
 #include "Jobs.h"
 #include "Look.h"
+#include "PetMenu.h"
 
 namespace
 {
@@ -58,6 +59,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	SetupLog();
 	SKSE::log::info("BeastHarmony 0.1.0, game {}", REL::Module::get().version().string());
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-	Look::RegisterPapyrus();  // Papyrus functions have to be registered while the plugin loads, not at kDataLoaded
+	Look::RegisterPapyrus();
+	PetMenu::RegisterPapyrus();  // Papyrus functions have to be registered while the plugin loads, not at kDataLoaded
 	return true;
 }
