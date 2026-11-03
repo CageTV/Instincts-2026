@@ -8,5 +8,6 @@ GlobalVariable Property CurrentPetIsEatingGlobal Auto
 Function Fragment_0(ObjectReference akSpeakerRef)
   Actor akSpeaker = akSpeakerRef as Actor
   CurrentPetIsEatingGlobal.SetValue(0 as Float)
+  Debug.Trace("[BeastHarmony] Do something for me: opening the pet list")
   BeastHarmony_Menu.Open(akSpeaker)
 EndFunction
