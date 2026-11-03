@@ -271,9 +271,10 @@ Function MakePet(Actor akTarget)
   BeastHarmony_Look.CopyLook(akTarget, petActor) ; Beast Harmony: the pet wears the wild animal's variant skin
   ; the pet exists and holds a slot: now the wild animal can go
   akTarget.SetAlpha(0.0, True)
-  akTarget.SetCriticalStage(akTarget.CritStage_DisintegrateEnd)
   TamedSound.Play(petActor as ObjectReference)
-  akTarget.Kill(PlayerREF)
+  ; Instincts+: the wild animal used to be Kill(PlayerREF)ed here, which made every OnDeath listener (Hunting in Skyrim hunt quests, kill counters) treat a taming as a player kill. It is removed without dying now.
+  akTarget.Disable(True)
+  akTarget.Delete()
   petActor.StopCombat()
   petActor.SetPlayerTeammate(True, False)
   petActor.EvaluatePackage()
