@@ -78,7 +78,27 @@ namespace Look
 				SKSE::log::info("look: {} ({:08X}) copied from the wild animal to the pet {:08X}", armor->GetName(), armor->GetFormID(), a_pet);
 			}
 			if (copied == 0) {
-				SKSE::log::info("look: the wild animal {:08X} wore no variant skin that fits the pet, nothing copied", a_wild);
+				// SkyTEST / Animallica: the variant is its own actor base on a vanilla race, and the look is that base's skin (WNAM)
+				const auto* wildBase = wild->GetActorBase();
+				const auto* petBase = pet->GetActorBase();
+				auto*       skin = wildBase ? wildBase->skin : nullptr;
+				const auto* petSkin = petBase ? petBase->skin : nullptr;
+				if (skin && skin != petSkin && !FromVariants(skin)) {
+					const auto* file = skin->GetFile(0);
+					SKSE::log::info("look: the wild base {:08X} ({}) has the skin {} ({:08X}, from {}); the pet's own skin is {:08X}", wildBase->GetFormID(), wildBase->GetName() ? wildBase->GetName() : "?",
+						skin->GetName() ? skin->GetName() : "?", skin->GetFormID(), file ? file->GetFilename() : "?", petSkin ? petSkin->GetFormID() : 0);
+					if (petRace && ShowsOn(skin, petRace)) {
+						pet->AddObjectToContainer(skin, nullptr, 1, nullptr);
+						equip->EquipObject(pet, skin, nullptr, 1, nullptr, true, true, false, true);
+						++copied;
+						SKSE::log::info("look: skin {:08X} of the wild animal put on the pet {:08X}", skin->GetFormID(), a_pet);
+					} else {
+						SKSE::log::warn("look: skin {:08X} cannot be drawn on pet race {}, skipped", skin->GetFormID(), petRace ? petRace->GetFormEditorID() : "?");
+					}
+				}
+			}
+			if (copied == 0) {
+				SKSE::log::info("look: the wild animal {:08X} has no different look to copy to the pet, nothing copied", a_wild);
 			}
 		}
 
@@ -115,10 +135,11 @@ namespace Look
 		}
 		const auto* originals = dh->LookupForm<RE::BGSListForm>(0x023FD8, kInstincts);
 		const auto* pets = dh->LookupForm<RE::BGSListForm>(0x06AFA4, kInstincts);
-		if (!originals || !pets || !dh->LookupModByName(kVariants)) {
-			SKSE::log::info("look: off (Instincts race lists {}, Dynamic Animal Variants Plus {})", (originals && pets) ? "found" : "missing", dh && dh->LookupModByName(kVariants) ? "found" : "missing");
+		if (!originals || !pets) {
+			SKSE::log::info("look: off (Instincts race lists missing)");
 			return;
 		}
+		SKSE::log::info("look: Dynamic Animal Variants Plus {}", dh->LookupModByName(kVariants) ? "found" : "not installed (its skins are skipped)");
 		for (std::uint32_t i = 0; i < originals->forms.size() && i < pets->forms.size(); ++i) {
 			auto* wild = originals->forms[i] ? originals->forms[i]->As<RE::TESRace>() : nullptr;
 			auto* pet = pets->forms[i] ? pets->forms[i]->As<RE::TESRace>() : nullptr;
@@ -146,6 +167,27 @@ namespace Look
 				++addons;
 			}
 		}
-		SKSE::log::info("look: {} wild races mapped to pet races, {} variant armor addons now also name the pet race", petRaceOf.size(), addons);
+		// variants that are their own actor base on a vanilla race: the skin of every base whose race is an Instincts original race
+		int skins = 0;
+		for (auto* npc : dh->GetFormArray<RE::TESNPC>()) {
+			auto* race = npc ? npc->GetRace() : nullptr;
+			auto* skin = npc ? npc->skin : nullptr;
+			if (!race || !skin) {
+				continue;
+			}
+			const auto it = petRaceOf.find(race->GetFormID());
+			if (it == petRaceOf.end()) {
+				continue;
+			}
+			bool changed = false;
+			for (auto* arma : skin->armorAddons) {
+				if (arma && Names(arma, race) && !Names(arma, it->second)) {
+					arma->additionalRaces.push_back(it->second);
+					changed = true;
+				}
+			}
+			skins += changed ? 1 : 0;
+		}
+		SKSE::log::info("look: {} wild races mapped to pet races, {} variant armor addons and {} actor-base skins now also name the pet race", petRaceOf.size(), addons, skins);
 	}
 }
