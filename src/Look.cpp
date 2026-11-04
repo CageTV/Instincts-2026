@@ -43,14 +43,15 @@ namespace Look
 		}
 
 		// main thread
-		void Apply(RE::FormID a_wild, RE::FormID a_pet)
+		std::vector<RE::FormID> Apply(RE::FormID a_wild, RE::FormID a_pet)
 		{
+			std::vector<RE::FormID> put;
 			auto* wild = RE::TESForm::LookupByID<RE::Actor>(a_wild);
 			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
 			auto* equip = RE::ActorEquipManager::GetSingleton();
 			if (!wild || !pet || !equip) {
 				SKSE::log::info("look: wild {:08X} or pet {:08X} is gone, nothing copied", a_wild, a_pet);
-				return;
+				return put;
 			}
 			const auto* petRace = pet->GetRace();
 			int         copied = 0;
@@ -86,6 +87,7 @@ namespace Look
 				pet->AddObjectToContainer(const_cast<RE::TESObjectARMO*>(armor), nullptr, 1, nullptr);
 				equip->EquipObject(pet, const_cast<RE::TESObjectARMO*>(armor), nullptr, 1, nullptr, true, true, false, true);
 				++copied;
+				put.push_back(armor->GetFormID());
 				SKSE::log::info("look: {} ({:08X}) copied from the wild animal to the pet {:08X}", armor->GetName(), armor->GetFormID(), a_pet);
 			}
 			if (copied == 0) {
@@ -102,6 +104,7 @@ namespace Look
 						pet->AddObjectToContainer(skin, nullptr, 1, nullptr);
 						equip->EquipObject(pet, skin, nullptr, 1, nullptr, true, true, false, true);
 						++copied;
+						put.push_back(skin->GetFormID());
 						SKSE::log::info("look: skin {:08X} of the wild animal put on the pet {:08X}", skin->GetFormID(), a_pet);
 					} else {
 						SKSE::log::warn("look: skin {:08X} cannot be drawn on pet race {}, skipped", skin->GetFormID(), petRace ? petRace->GetFormEditorID() : "?");
@@ -110,6 +113,26 @@ namespace Look
 			}
 			if (copied == 0) {
 				SKSE::log::info("look: the wild animal {:08X} has no different look to copy to the pet, nothing copied", a_wild);
+			}
+			return put;
+		}
+
+		// the equip can be dropped while the pet is still being set up: check and repeat it
+		void Ensure(RE::FormID a_pet, const std::vector<RE::FormID>& a_armors)
+		{
+			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
+			auto* equip = RE::ActorEquipManager::GetSingleton();
+			if (!pet || !equip) {
+				return;
+			}
+			for (const auto id : a_armors) {
+				auto* armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(id);
+				if (!armor || pet->GetWornArmor(RE::BGSBipedObjectForm::BipedObjectSlot::kBody) == armor) {
+					continue;
+				}
+				SKSE::log::warn("look: pet {:08X} does not wear {:08X}, equipping again", a_pet, id);
+				pet->AddObjectToContainer(armor, nullptr, 1, nullptr);
+				equip->EquipObject(pet, armor, nullptr, 1, nullptr, true, true, false, true);
 			}
 		}
 
@@ -143,12 +166,15 @@ namespace Look
 			// a moment later, on the game thread: the pet has just been placed
 			std::thread([wild, pet] {
 				std::this_thread::sleep_for(std::chrono::milliseconds(800));
+				auto put = std::make_shared<std::vector<RE::FormID>>();
 				if (const auto* tasks = SKSE::GetTaskInterface()) {
-					tasks->AddTask([wild, pet] { Apply(wild, pet); });
+					tasks->AddTask([wild, pet, put] { *put = Apply(wild, pet); });
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-				if (const auto* tasks = SKSE::GetTaskInterface()) {
-					tasks->AddTask([pet] { LogWorn(pet); });
+				for (int i = 0; i < 3; ++i) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+					if (const auto* tasks = SKSE::GetTaskInterface()) {
+						tasks->AddTask([pet, put] { Ensure(pet, *put); LogWorn(pet); });
+					}
 				}
 			}).detach();
 		}
