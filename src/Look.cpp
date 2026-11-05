@@ -42,6 +42,23 @@ namespace Look
 			return false;
 		}
 
+		// Puts a skin on the pet. The engine only lets an actor wear an armor made for its own race (the armor's Race field), and a wild animal's skin is made
+		// for the WILD race, so the field is pointed at the pet's race for the moment of the equip and put back at once (wild animals wear the same armor).
+		void EquipSkin(RE::Actor* a_pet, RE::ActorEquipManager* a_equip, RE::TESObjectARMO* a_armor)
+		{
+			auto* petRace = a_pet->GetRace();
+			auto* was = a_armor->race;
+			if (petRace) {
+				a_armor->race = petRace;
+			}
+			a_pet->AddObjectToContainer(a_armor, nullptr, 1, nullptr);
+			a_equip->EquipObject(a_pet, a_armor, nullptr, 1, nullptr, true, true, false, true);
+			const bool worn = a_pet->GetWornArmor(RE::BGSBipedObjectForm::BipedObjectSlot::kBody) == a_armor;
+			a_armor->race = was;
+			SKSE::log::info("look: equip of {:08X} on {:08X} (armor race {} -> pet race {} for the equip): worn right after {}", a_armor->GetFormID(), a_pet->GetFormID(),
+				was ? was->GetFormEditorID() : "none", petRace ? petRace->GetFormEditorID() : "none", worn);
+		}
+
 		// main thread
 		std::vector<RE::FormID> Apply(RE::FormID a_wild, RE::FormID a_pet)
 		{
@@ -84,8 +101,7 @@ namespace Look
 					SKSE::log::warn("look: {} ({:08X}) cannot be drawn on pet race {}, skipped", armor->GetName(), armor->GetFormID(), petRace ? petRace->GetFormEditorID() : "?");
 					continue;
 				}
-				pet->AddObjectToContainer(const_cast<RE::TESObjectARMO*>(armor), nullptr, 1, nullptr);
-				equip->EquipObject(pet, const_cast<RE::TESObjectARMO*>(armor), nullptr, 1, nullptr, true, true, false, true);
+				EquipSkin(pet, equip, const_cast<RE::TESObjectARMO*>(armor));
 				++copied;
 				put.push_back(armor->GetFormID());
 				SKSE::log::info("look: {} ({:08X}) copied from the wild animal to the pet {:08X}", armor->GetName(), armor->GetFormID(), a_pet);
@@ -101,8 +117,7 @@ namespace Look
 					SKSE::log::info("look: the wild base {:08X} ({}) has the skin {} ({:08X}, from {}); the pet's own skin is {:08X}", wildBase->GetFormID(), wildBase->GetName() ? wildBase->GetName() : "?",
 						skin->GetName() ? skin->GetName() : "?", skin->GetFormID(), file ? file->GetFilename() : "?", petSkin ? petSkin->GetFormID() : 0);
 					if (petRace && ShowsOn(skin, petRace)) {
-						pet->AddObjectToContainer(skin, nullptr, 1, nullptr);
-						equip->EquipObject(pet, skin, nullptr, 1, nullptr, true, true, false, true);
+						EquipSkin(pet, equip, skin);
 						++copied;
 						put.push_back(skin->GetFormID());
 						SKSE::log::info("look: skin {:08X} of the wild animal put on the pet {:08X}", skin->GetFormID(), a_pet);
@@ -131,8 +146,7 @@ namespace Look
 					continue;
 				}
 				SKSE::log::warn("look: pet {:08X} does not wear {:08X}, equipping again", a_pet, id);
-				pet->AddObjectToContainer(armor, nullptr, 1, nullptr);
-				equip->EquipObject(pet, armor, nullptr, 1, nullptr, true, true, false, true);
+				EquipSkin(pet, equip, armor);
 			}
 		}
 
