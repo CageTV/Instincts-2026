@@ -247,7 +247,8 @@ namespace Jobs
 				} else if (plant && !ended && secs < 60) {
 					return false;  // still walking
 				} else {
-					SKSE::log::info("jobs: {} gave up on plant {} (state {}, {}s)", j.name, j.next, state, secs);
+					SKSE::log::info("jobs: {} gave up on plant {} [{:08X}] (state {}, {}s, {:.0f} units away, blocker kind {}, plant {})", j.name, j.next, j.next < j.plants.size() ? j.plants[j.next] : 0u, state, secs,
+						plant ? pet->GetPosition().GetDistance(plant->GetPosition()) : -1.0f, info.blockerKind, plant ? (plant->IsDisabled() ? "disabled" : "enabled") : "not loaded");
 				}
 				++j.next;
 				if (j.travel) {
