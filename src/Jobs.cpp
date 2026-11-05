@@ -321,41 +321,55 @@ namespace Jobs
 				return 0.0f;
 			}
 
-			// a wild animal the pet may kill: unaggressive (so not a predator), nobody's livestock or pet (no crime faction, no owner), not unique / essential / tamed
-			bool IsPrey(RE::Actor* a_actor, RE::Actor* a_pet, float a_cap, float* a_health)
+			// Why an animal is NOT prey for this pet: "" = it is prey, "-" = not a living animal at all (not worth a log line).
+			// Prey = an unaggressive wild animal nobody owns (no crime faction, no owner), not unique / essential / tamed, within the size cap.
+			std::string PreyVerdict(RE::Actor* a_actor, RE::Actor* a_pet, float a_cap, float* a_health)
 			{
 				if (!a_actor || a_actor == a_pet || a_actor->IsDead() || a_actor->IsDisabled() || a_actor->IsDeleted() || !a_actor->Is3DLoaded()) {
-					return false;
-				}
-				if (a_actor->IsPlayerTeammate() || a_actor->IsEssential() || a_actor->IsProtected() || a_actor->IsGhost()) {
-					return false;
+					return "-";
 				}
 				const auto* race = a_actor->GetRace();
 				if (!race || !race->HasKeywordString("ActorTypeAnimal"sv)) {
-					return false;
+					return "-";
 				}
-				if (a_actor->GetCrimeFaction() || a_actor->GetOwner()) {
-					return false;  // livestock and village pets: killing them can be a crime
+				if (a_actor->IsPlayerTeammate()) {
+					return "a follower or pet";
+				}
+				if (a_actor->IsEssential() || a_actor->IsProtected()) {
+					return "essential / protected";
+				}
+				if (a_actor->IsGhost()) {
+					return "a ghost";
+				}
+				if (a_actor->GetCrimeFaction()) {
+					return "has a crime faction (livestock / village animal)";
+				}
+				if (a_actor->GetOwner()) {
+					return "has an owner";
 				}
 				const auto* base = a_actor->GetActorBase();
 				if (!base || base->IsUnique() || !Pets::ClassOf(a_actor).empty()) {
-					return false;
+					return "unique or a tamed pet";
 				}
-				auto* av = a_actor->AsActorValueOwner();
-				if (av->GetActorValue(RE::ActorValue::kAggression) >= 1.0f) {
-					return false;  // predators and anything that attacks on sight
+				auto*       av = a_actor->AsActorValueOwner();
+				const float aggression = av->GetActorValue(RE::ActorValue::kAggression);
+				if (aggression >= 1.0f) {
+					return std::format("aggressive ({:.0f}), a predator", aggression);
 				}
 				const auto rn = Lower(race->GetName() ? race->GetName() : "");
 				for (const char* k : { "horse", "dog", "mammoth", "giant" }) {
 					if (rn.find(k) != std::string::npos) {
-						return false;
+						return std::format("race '{}' is never hunted", race->GetName());
 					}
 				}
 				const float hp = av->GetPermanentActorValue(RE::ActorValue::kHealth);
 				if (a_health) {
 					*a_health = hp;
 				}
-				return hp >= 1.0f && hp <= a_cap;
+				if (hp < 1.0f || hp > a_cap) {
+					return std::format("health {:.0f} is over the size cap {:.0f}", hp, a_cap);
+				}
+				return {};
 			}
 
 			// prey within reach, nearest first
@@ -369,8 +383,12 @@ namespace Jobs
 						if (actor && actor != a_pet && !actor->IsDead()) {
 							++animals;
 						}
-						float hp = 0.0f;
-						if (IsPrey(actor, a_pet, a_cap, &hp) && std::ranges::find(a_tried, actor->GetFormID()) == a_tried.end()) {
+						float       hp = 0.0f;
+						const auto  why = PreyVerdict(actor, a_pet, a_cap, &hp);
+						if (!why.empty() && why != "-") {
+							SKSE::log::info("hunt: skip {} [{:08X}] ({}): {}", actor->GetName() ? actor->GetName() : "?", actor->GetFormID(), actor->GetRace() && actor->GetRace()->GetName() ? actor->GetRace()->GetName() : "?", why);
+						}
+						if (why.empty() && std::ranges::find(a_tried, actor->GetFormID()) == a_tried.end()) {
 							const float d = actor->GetPosition().GetDistance(a_pet->GetPosition());
 							found.emplace_back(d, actor->GetFormID());
 							SKSE::log::info("hunt: candidate {} [{:08X}] health {:.0f} (cap {:.0f}), {:.0f} units away", actor->GetName() ? actor->GetName() : "?", actor->GetFormID(), hp, a_cap, d);
