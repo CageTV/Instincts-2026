@@ -81,6 +81,14 @@ namespace Config
 		float arriveRadius = 150.0f;
 		bool  sound = true;        // the animal makes its own sound when it is back
 		float soundVolume = 1.0f;  // 0..1
+		// Hunt: a fighter pet kills wild game (unaggressive animals nobody owns), takes what the carcass holds, then walks back to the player.
+		float huntRange = 3500.0f;         // how far from the pet it looks for prey
+		int   huntKills = 1;               // kills per trip
+		float huntSecondsPerPrey = 90.0f;  // real seconds it chases one animal before giving up on it
+		float huntHealthWolf = 45.0f;      // largest prey (health) per species: wolves small game,
+		float huntHealthCat = 130.0f;      //   big cats small to medium game,
+		float huntHealthBear = 300.0f;     //   bears any size
+		float huntLootFraction = 0.25f;    // the pet takes at most this share of its carry weight from a carcass
 	};
 
 	// the pet command list ("Do something for me"): SkyPrompt prompts when SkyPrompt is installed, else a message box
@@ -99,6 +107,7 @@ namespace Config
 		int   keyGather = 0x2C;   // DirectInput scan codes: 0x2C = Z, 0x2D = X, 0x2E = C
 		int   keyOther = 0x2D;
 		int   keyCancel = 0x2E;
+		int   keyHunt = 0x2F;     // 0x2F = V
 		float seconds = 20.0f;    // the prompts go away by themselves after this long
 	};
 

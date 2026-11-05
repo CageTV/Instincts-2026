@@ -18,7 +18,7 @@ namespace PetMenu
 {
 	namespace
 	{
-		enum class Action { Gather, Favor, Nothing };
+		enum class Action { Gather, Hunt, Favor, Nothing };
 
 		// the game's own "do a favor" mode of the Instincts pets (what the old "Do something for me" entry switched on)
 		void StartFavor(RE::Actor* a_pet)
@@ -49,6 +49,9 @@ namespace PetMenu
 				case Action::Gather:
 					Jobs::Gather(actor);
 					break;
+				case Action::Hunt:
+					Jobs::Hunt(actor);
+					break;
 				case Action::Favor:
 					StartFavor(actor);
 					break;
@@ -65,7 +68,10 @@ namespace PetMenu
 			if (Jobs::CanGather(a_pet)) {
 				out.push_back(Action::Gather);
 			}
-			out.push_back(Action::Favor);
+			if (Jobs::CanHunt(a_pet)) {
+					out.push_back(Action::Hunt);
+				}
+				out.push_back(Action::Favor);
 			out.push_back(Action::Nothing);
 			return out;
 		}
@@ -75,6 +81,8 @@ namespace PetMenu
 			switch (a_act) {
 			case Action::Gather:
 				return Jobs::GatherLabel(a_pet);
+			case Action::Hunt:
+				return "Go hunting";
 			case Action::Favor:
 				return "Something else";
 			default:
@@ -198,7 +206,7 @@ namespace PetMenu
 			const int scan[3] = { cfg.keyGather, cfg.keyOther, cfg.keyCancel };
 			for (std::size_t i = 0; i < me.actions.size(); ++i) {
 				// the last entry is always "Never mind", the first Gather when it exists
-				const int code = me.actions[i] == Action::Gather ? scan[0] : (me.actions[i] == Action::Favor ? scan[1] : scan[2]);
+				const int code = me.actions[i] == Action::Gather ? scan[0] : (me.actions[i] == Action::Hunt ? cfg.keyHunt : (me.actions[i] == Action::Favor ? scan[1] : scan[2]));
 				me.texts.push_back(Label(me.actions[i], pet));
 				me.keys.push_back({ { RE::INPUT_DEVICE::kKeyboard, static_cast<SkyPromptAPI::ButtonID>(code) } });
 			}
@@ -266,7 +274,10 @@ namespace PetMenu
 			if (Jobs::CanGather(pet)) {
 				add(Jobs::GatherLabel(pet), Action::Gather);
 			}
-			add("Something else", Action::Favor);
+			if (Jobs::CanHunt(pet)) {
+					add("Go hunting", Action::Hunt);
+				}
+				add("Something else", Action::Favor);
 			add("Never mind", Action::Nothing);
 
 			data->bodyText = std::format("What should {} do?", name).c_str();

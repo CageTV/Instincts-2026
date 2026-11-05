@@ -26,7 +26,10 @@ namespace MenuPage
 			if (KeyPicker::Field("bh_kg", "Gather what you can find:", &menu.keyGather)) {
 				changed = true;
 			}
-			if (KeyPicker::Field("bh_ko", "Something else (the old favor mode):", &menu.keyOther)) {
+			if (KeyPicker::Field("bh_kh", "Go hunting (wolves, big cats, bears):", &menu.keyHunt)) {
+					changed = true;
+				}
+				if (KeyPicker::Field("bh_ko", "Something else (the old favor mode):", &menu.keyOther)) {
 				changed = true;
 			}
 			if (KeyPicker::Field("bh_kc", "Never mind:", &menu.keyCancel)) {

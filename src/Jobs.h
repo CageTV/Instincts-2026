@@ -21,4 +21,11 @@ namespace Jobs
 
 	// the menu text of that job: "Go fishing" for a bear, "Gather what you can find" for the rest
 	const char* GatherLabel(RE::Actor* a_pet);
+
+	// Hunt: wolves (small game), big cats (small and medium game) and bears (any game up to a cap) go and kill wild animals nobody owns, take what the
+	// carcass holds into their own inventory and walk back to the player. Sets the pet out; returns true if it went. Game thread only.
+	bool Hunt(RE::Actor* a_pet);
+
+	// true for a pet that can hunt (fighter class and a species with a prey size)
+	bool CanHunt(RE::Actor* a_pet);
 }

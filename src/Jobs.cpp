@@ -29,7 +29,8 @@ namespace Jobs
 		const APMF_API::APMF_API_v12* g_api = nullptr;
 		constexpr float               kBasis = 50.0f;
 
-		enum class Phase { Walking, Dwelling, Returning };
+		enum class Phase { Walking, Dwelling, Returning, Hunting };
+		enum class Kind { Gather, Hunt };
 
 		struct Job
 		{
@@ -43,6 +44,13 @@ namespace Jobs
 			float                    startDays = 0.0f;
 			std::chrono::steady_clock::time_point legStart;
 			int                      picked = 0;
+			// Hunt
+			Kind                     kind = Kind::Gather;
+			RE::FormID               prey = 0;            // the animal it is after now
+			std::vector<RE::FormID>  tried;               // animals already chased on this trip
+			int                      kills = 0;
+			std::chrono::steady_clock::time_point preyStart;   // when it started after this prey
+			std::chrono::steady_clock::time_point lastEngage;  // last time it was told to attack
 		};
 
 		std::vector<Job>  g_jobs;            // game thread only
@@ -286,10 +294,206 @@ namespace Jobs
 			ReleaseAll(j);
 			PlayDone(RE::TESForm::LookupByID<RE::Actor>(j.pet));
 			SKSE::log::info("jobs: {} [{:08X}] trip over ({}), {} picked", j.name, j.pet, a_why, j.picked);
-			Note(std::format("{} is back{}.", j.name, j.picked ? std::format(" with {} item(s)", j.picked) : std::string(" empty-handed")));
+			Note(std::format("{} is back{}{}.", j.name, j.kind == Kind::Hunt ? " from the hunt" : "", j.picked ? std::format(" with {} item(s)", j.picked) : std::string(" empty-handed")));
 		}
 
-		// returns true when the job is finished and should be removed
+		// ------------------------------------------------------------------ Hunt
+
+			std::string Lower(std::string s)
+			{
+				std::ranges::transform(s, s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				return s;
+			}
+
+			// the largest prey (health) this species hunts: wolves small game, big cats small to medium, bears any (up to the cap); 0 = does not hunt
+			float HuntHealthCap(const std::string& a_species)
+			{
+				const auto& c = Config::GetJobs();
+				if (a_species.find("wolf") != std::string::npos) {
+					return c.huntHealthWolf;
+				}
+				if (a_species.find("sabre cat") != std::string::npos) {
+					return c.huntHealthCat;
+				}
+				if (IsBear(a_species)) {
+					return c.huntHealthBear;
+				}
+				return 0.0f;
+			}
+
+			// a wild animal the pet may kill: unaggressive (so not a predator), nobody's livestock or pet (no crime faction, no owner), not unique / essential / tamed
+			bool IsPrey(RE::Actor* a_actor, RE::Actor* a_pet, float a_cap, float* a_health)
+			{
+				if (!a_actor || a_actor == a_pet || a_actor->IsDead() || a_actor->IsDisabled() || a_actor->IsDeleted() || !a_actor->Is3DLoaded()) {
+					return false;
+				}
+				if (a_actor->IsPlayerTeammate() || a_actor->IsEssential() || a_actor->IsProtected() || a_actor->IsGhost()) {
+					return false;
+				}
+				const auto* race = a_actor->GetRace();
+				if (!race || !race->HasKeywordString("ActorTypeAnimal"sv)) {
+					return false;
+				}
+				if (a_actor->GetCrimeFaction() || a_actor->GetOwner()) {
+					return false;  // livestock and village pets: killing them can be a crime
+				}
+				const auto* base = a_actor->GetActorBase();
+				if (!base || base->IsUnique() || !Pets::ClassOf(a_actor).empty()) {
+					return false;
+				}
+				auto* av = a_actor->AsActorValueOwner();
+				if (av->GetActorValue(RE::ActorValue::kAggression) >= 1.0f) {
+					return false;  // predators and anything that attacks on sight
+				}
+				const auto rn = Lower(race->GetName() ? race->GetName() : "");
+				for (const char* k : { "horse", "dog", "mammoth", "giant" }) {
+					if (rn.find(k) != std::string::npos) {
+						return false;
+					}
+				}
+				const float hp = av->GetPermanentActorValue(RE::ActorValue::kHealth);
+				if (a_health) {
+					*a_health = hp;
+				}
+				return hp >= 1.0f && hp <= a_cap;
+			}
+
+			// prey within reach, nearest first
+			std::vector<RE::FormID> FindPrey(RE::Actor* a_pet, float a_cap, const std::vector<RE::FormID>& a_tried)
+			{
+				std::vector<std::pair<float, RE::FormID>> found;
+				int                                       animals = 0;
+				if (auto* tes = RE::TES::GetSingleton()) {
+					tes->ForEachReferenceInRange(a_pet, Config::GetJobs().huntRange, [&](RE::TESObjectREFR* a_ref) {
+						auto* actor = a_ref ? a_ref->As<RE::Actor>() : nullptr;
+						if (actor && actor != a_pet && !actor->IsDead()) {
+							++animals;
+						}
+						float hp = 0.0f;
+						if (IsPrey(actor, a_pet, a_cap, &hp) && std::ranges::find(a_tried, actor->GetFormID()) == a_tried.end()) {
+							const float d = actor->GetPosition().GetDistance(a_pet->GetPosition());
+							found.emplace_back(d, actor->GetFormID());
+							SKSE::log::info("hunt: candidate {} [{:08X}] health {:.0f} (cap {:.0f}), {:.0f} units away", actor->GetName() ? actor->GetName() : "?", actor->GetFormID(), hp, a_cap, d);
+						}
+						return RE::BSContainer::ForEachResult::kContinue;
+					});
+				}
+				if (found.empty()) {
+					SKSE::log::info("hunt: no prey within {:.0f} units ({} living actors seen, size cap {:.0f})", Config::GetJobs().huntRange, animals, a_cap);
+				}
+				std::ranges::sort(found);
+				std::vector<RE::FormID> out;
+				for (const auto& f : found) {
+					out.push_back(f.second);
+				}
+				return out;
+			}
+
+			// the pet takes what the carcass holds (not worn skins, weapons or quest items), up to a share of its carry weight; returns how many items moved
+			int TakeCarcass(RE::Actor* a_pet, RE::Actor* a_prey, std::string& a_what)
+			{
+				float room = std::max(a_pet->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight), 100.0f) * Config::GetJobs().huntLootFraction;
+				int   moved = 0;
+				auto  inv = a_prey->GetInventory([](RE::TESBoundObject& o) { return !o.IsArmor() && !o.IsWeapon(); });
+				for (auto& [obj, entry] : inv) {
+					const auto  count = entry.first;
+					const auto* data = entry.second.get();
+					if (!obj || count <= 0 || (data && (data->IsWorn() || data->IsQuestObject()))) {
+						continue;
+					}
+					int         n = count;
+					const float w = obj->GetWeight();
+					if (w > 0.0f) {
+						n = std::min(n, static_cast<int>(room / w));
+					}
+					if (n <= 0) {
+						continue;
+					}
+					a_prey->RemoveItem(obj, n, RE::ITEM_REMOVE_REASON::kRemove, nullptr, a_pet);
+					room -= w * static_cast<float>(n);
+					moved += n;
+					a_what += std::format(" {}x {}", n, obj->GetName() ? obj->GetName() : "?");
+				}
+				return moved;
+			}
+
+			// picks the nearest untried prey and sets the pet on it; false when there is none
+			bool NextPrey(Job& j, RE::Actor* a_pet)
+			{
+				const auto prey = FindPrey(a_pet, HuntHealthCap(Pets::SpeciesNameOf(a_pet)), j.tried);
+				if (prey.empty()) {
+					return false;
+				}
+				j.prey = prey.front();
+				j.tried.push_back(j.prey);
+				j.preyStart = j.lastEngage = std::chrono::steady_clock::now();
+				auto*      target = RE::TESForm::LookupByID<RE::Actor>(j.prey);
+				const bool ok = target && a_pet->StartCombat(target);
+				SKSE::log::info("hunt: {} [{:08X}] goes after {} [{:08X}] (StartCombat {})", j.name, j.pet, target && target->GetName() ? target->GetName() : "?", j.prey, ok);
+				return true;
+			}
+
+			// stops the fight and walks the pet back to the player; true when the trip is over for good
+			bool GoHome(Job& j, RE::Actor* a_pet, const char* a_why)
+			{
+				a_pet->StopCombat();
+				j.prey = 0;
+				if (j.travel) {
+					g_api->Release(j.travel);
+					j.travel = 0;
+				}
+				j.travel = WalkTo(j.pet, 0x14);
+				j.phase = Phase::Returning;
+				j.legStart = std::chrono::steady_clock::now();
+				SKSE::log::info("hunt: {} [{:08X}] heads back ({}), {} kill(s), {} item(s) taken", j.name, j.pet, a_why, j.kills, j.picked);
+				if (!j.travel) {
+					Finish(j, "could not walk back");
+					return true;
+				}
+				return false;
+			}
+
+			bool HuntStep(Job& j, RE::Actor* a_pet)
+			{
+				const auto& cfg = Config::GetJobs();
+				const auto  now = std::chrono::steady_clock::now();
+				auto*       prey = j.prey ? RE::TESForm::LookupByID<RE::Actor>(j.prey) : nullptr;
+
+				if (prey && prey->IsDead()) {
+					std::string what;
+					const int   n = TakeCarcass(a_pet, prey, what);
+					j.picked += n;
+					++j.kills;
+					SKSE::log::info("hunt: {} killed {} [{:08X}], took {} item(s):{}", j.name, prey->GetName() ? prey->GetName() : "?", j.prey, n, what.empty() ? " nothing" : what);
+					Note(std::format("{} brings down {}.", j.name, prey->GetName() ? prey->GetName() : "an animal"));
+					a_pet->StopCombat();
+					j.prey = 0;
+					if (j.kills < cfg.huntKills && NextPrey(j, a_pet)) {
+						return false;
+					}
+					return GoHome(j, a_pet, "hunt done");
+				}
+				const auto secs = std::chrono::duration_cast<std::chrono::seconds>(now - j.preyStart).count();
+				if (!j.prey || !prey || secs > cfg.huntSecondsPerPrey) {
+					if (j.prey) {
+						SKSE::log::info("hunt: {} gave up on [{:08X}] ({}, {}s)", j.name, j.prey, prey ? "too slow" : "no longer loaded", secs);
+					}
+					a_pet->StopCombat();
+					j.prey = 0;
+					if (NextPrey(j, a_pet)) {
+						return false;
+					}
+					return GoHome(j, a_pet, j.kills ? "no more prey" : "nothing caught");
+				}
+				// the engine drops the fight when the animal runs out of sight: tell the pet again
+				if (!a_pet->IsInCombat() && std::chrono::duration_cast<std::chrono::seconds>(now - j.lastEngage).count() >= 3) {
+					j.lastEngage = now;
+					a_pet->StartCombat(prey);
+				}
+				return false;
+			}
+
+			// returns true when the job is finished and should be removed
 		bool Step(Job& j)
 		{
 			auto* pet = RE::TESForm::LookupByID<RE::Actor>(j.pet);
@@ -299,7 +503,11 @@ namespace Jobs
 				SKSE::log::info("jobs: {} [{:08X}] gone, trip dropped", j.name, j.pet);
 				return true;
 			}
-			if (pet->IsInCombat()) {
+			if (j.kind == Kind::Hunt && j.phase == Phase::Hunting) {
+					return HuntStep(j, pet);
+				}
+				// a hunter has only just left the fight on the way home: give the engine a few seconds to drop it
+				if (pet->IsInCombat() && !(j.kind == Kind::Hunt && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - j.legStart).count() < 8)) {
 				Finish(j, "combat");
 				return true;
 			}
@@ -435,7 +643,33 @@ namespace Jobs
 			return true;
 		}
 
-		// one key: every tamed gatherer / scavenger near the player goes out for what its species can gather
+		// sends one fighter pet out to hunt; returns true if it set out
+			bool StartHunt(RE::Actor* pet)
+			{
+				const std::string name = pet->GetName() ? pet->GetName() : "Your pet";
+				if (std::ranges::any_of(g_jobs, [&](const Job& j) { return j.pet == pet->GetFormID(); })) {
+					return false;
+				}
+				if (pet->IsInCombat() || pet->IsDead()) {
+					return false;
+				}
+				Job j;
+				j.pet = pet->GetFormID();
+				j.name = name;
+				j.kind = Kind::Hunt;
+				j.phase = Phase::Hunting;
+				if (!NextPrey(j, pet)) {
+					Note(name + " finds no game nearby.");
+					return false;
+				}
+				SKSE::log::info("hunt: {} [{:08X}] ({}) sets out, up to {} kill(s)", name, j.pet, Pets::SpeciesNameOf(pet), Config::GetJobs().huntKills);
+				Note(std::format("{} sets out to hunt.", name));
+				g_jobs.push_back(std::move(j));
+				StartTicker();
+				return true;
+			}
+
+			// one key: every tamed gatherer / scavenger near the player goes out for what its species can gather
 		void Start()
 		{
 			auto* player = RE::PlayerCharacter::GetSingleton();
@@ -509,6 +743,20 @@ namespace Jobs
 	}
 
 	const char* GatherLabel(RE::Actor* a_pet) { return IsBear(Pets::SpeciesNameOf(a_pet)) ? "Go fishing" : "Gather what you can find"; }
+
+	bool CanHunt(RE::Actor* a_pet) { return a_pet && Pets::ClassOf(a_pet) == "fighter" && HuntHealthCap(Pets::SpeciesNameOf(a_pet)) > 0.0f; }
+
+	bool Hunt(RE::Actor* a_pet)
+	{
+		if (!a_pet || !Connect()) {
+			return false;
+		}
+		if (!CanHunt(a_pet)) {
+			Note(std::string(a_pet->GetName() ? a_pet->GetName() : "Your pet") + " does not hunt.");
+			return false;
+		}
+		return StartHunt(a_pet);
+	}
 
 	void Init()
 	{
