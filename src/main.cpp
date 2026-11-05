@@ -15,6 +15,7 @@
 #include "Jobs.h"
 #include "Look.h"
 #include "PetMenu.h"
+#include "MenuPage.h"
 
 namespace
 {
@@ -55,6 +56,7 @@ namespace
 				Spike::Init();
 				Jobs::Init();
 				Look::Init();
+				MenuPage::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}
