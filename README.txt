@@ -12,3 +12,6 @@ Taming Mode off (the default after loading) leaves hunting untouched.
 Config: Data/SKSE/Plugins/BeastHarmony/config.json ("mode": hotkey / always / never, "toggleKey", chances, threshold, seconds, levels, slotLimit).
 Log: BeastHarmony.log (one line per roll).
 Needs: Instincts - Animal Taming in Skyrim; Instincts - Fixes (this project) for the slot cost.
+
+Credits:
+Knock-out indicator icon: "classes beastmaster" by Maxicons from Noun Project (https://thenounproject.com/icon/classes-beastmaster-2360013/), used under the Noun Project free licence (CC BY 3.0).
