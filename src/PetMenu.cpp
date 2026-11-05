@@ -62,7 +62,7 @@ namespace PetMenu
 		{
 			std::vector<Action> out;
 			const std::string   cls = Pets::ClassOf(a_pet);
-			if (cls == "gatherer" || cls == "scavenger") {
+			if (Jobs::CanGather(a_pet)) {
 				out.push_back(Action::Gather);
 			}
 			out.push_back(Action::Favor);
@@ -70,11 +70,11 @@ namespace PetMenu
 			return out;
 		}
 
-		const char* Label(Action a_act)
+		const char* Label(Action a_act, RE::Actor* a_pet)
 		{
 			switch (a_act) {
 			case Action::Gather:
-				return "Gather what you can find";
+				return Jobs::GatherLabel(a_pet);
 			case Action::Favor:
 				return "Something else";
 			default:
@@ -199,7 +199,7 @@ namespace PetMenu
 			for (std::size_t i = 0; i < me.actions.size(); ++i) {
 				// the last entry is always "Never mind", the first Gather when it exists
 				const int code = me.actions[i] == Action::Gather ? scan[0] : (me.actions[i] == Action::Favor ? scan[1] : scan[2]);
-				me.texts.push_back(Label(me.actions[i]));
+				me.texts.push_back(Label(me.actions[i], pet));
 				me.keys.push_back({ { RE::INPUT_DEVICE::kKeyboard, static_cast<SkyPromptAPI::ButtonID>(code) } });
 			}
 			for (std::size_t i = 0; i < me.actions.size(); ++i) {
@@ -263,8 +263,8 @@ namespace PetMenu
 				data->buttonText.push_back(a_label);
 				cb->actions.push_back(a_action);
 			};
-			if (cls == "gatherer" || cls == "scavenger") {
-				add("Gather what you can find", Action::Gather);
+			if (Jobs::CanGather(pet)) {
+				add(Jobs::GatherLabel(pet), Action::Gather);
 			}
 			add("Something else", Action::Favor);
 			add("Never mind", Action::Nothing);

@@ -15,4 +15,10 @@ namespace Jobs
 
 	// Sends one gatherer / scavenger pet out to gather (the menu entry). Returns true if it set out. Game thread only.
 	bool Gather(RE::Actor* a_pet);
+
+	// true for a pet that has the gather job: gatherers and scavengers (plants) and bears (fishing)
+	bool CanGather(RE::Actor* a_pet);
+
+	// the menu text of that job: "Go fishing" for a bear, "Gather what you can find" for the rest
+	const char* GatherLabel(RE::Actor* a_pet);
 }

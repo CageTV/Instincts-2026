@@ -120,7 +120,46 @@ namespace Jobs
 			return flora && flora->produceItem;
 		}
 
-		std::vector<RE::FormID> FindPlants(RE::Actor* a_pet, float a_range, int a_max)
+		// fish are flora in Skyrim (and in CC Fishing / Improved Fish): recognised by the name of the fish or of what it gives
+		bool NameHasFish(const char* a_name)
+		{
+			if (!a_name || !*a_name) {
+				return false;
+			}
+			std::string n = a_name;
+			std::ranges::transform(n, n.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+			if (n.find("egg") != std::string::npos || n.find("roe") != std::string::npos || n.find("nest") != std::string::npos) {
+				return false;
+			}
+			for (const char* k : { "salmon", "fish", "bass", "trout", "pike", "carp", "eel", "perch", "cod", "herring", "tuna", "pickerel", "sturgeon" }) {
+				if (n.find(k) != std::string::npos) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		bool IsSalmon(const char* a_name)
+		{
+			if (!a_name) {
+				return false;
+			}
+			std::string n = a_name;
+			std::ranges::transform(n, n.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+			return n.find("salmon") != std::string::npos;
+		}
+
+		bool IsFishRef(RE::TESObjectREFR* a_ref)
+		{
+			const auto* base = a_ref ? a_ref->GetBaseObject() : nullptr;
+			const auto* produce = ProduceOf(a_ref);
+			return (base && NameHasFish(base->GetName())) || (produce && produce->produceItem && NameHasFish(produce->produceItem->GetName()));
+		}
+
+		bool IsBear(const std::string& a_species) { return a_species.find("bear") != std::string::npos; }
+
+		// a_fish: only fish, salmon first (the bear's job); otherwise only things that are not fish
+		std::vector<RE::FormID> FindPlants(RE::Actor* a_pet, float a_range, int a_max, bool a_fish)
 		{
 			std::vector<std::pair<float, RE::FormID>> found;
 			int                                       withProduce = 0;  // refs that could give produce, whatever their state (for the log when nothing is found)
@@ -129,14 +168,18 @@ namespace Jobs
 					if (const auto* p = ProduceOf(a_ref); p && p->produceItem) {
 						++withProduce;
 					}
-					if (IsGatherable(a_ref)) {
-						found.emplace_back(a_ref->GetPosition().GetDistance(a_pet->GetPosition()), a_ref->GetFormID());
+					if (IsGatherable(a_ref) && IsFishRef(a_ref) == a_fish) {
+						float d = a_ref->GetPosition().GetDistance(a_pet->GetPosition());
+						if (a_fish && IsSalmon(a_ref->GetBaseObject() ? a_ref->GetBaseObject()->GetName() : nullptr)) {
+							d -= 100000.0f;  // salmon first, whatever the distance
+						}
+						found.emplace_back(d, a_ref->GetFormID());
 					}
 					return RE::BSContainer::ForEachResult::kContinue;
 				});
 			}
 			if (found.empty()) {
-				SKSE::log::info("jobs: no gatherable plant in range; {} references with produce were seen (harvested, disabled or not loaded ones do not count)", withProduce);
+				SKSE::log::info("jobs: nothing to {} in range; {} references with produce were seen (harvested, disabled or not loaded ones do not count)", a_fish ? "fish" : "gather", withProduce);
 			}
 			std::ranges::sort(found);
 			std::vector<RE::FormID> out;
@@ -167,6 +210,35 @@ namespace Jobs
 			const bool harvested = (a_plant->GetFormFlags() & RE::TESObjectREFR::RecordFlags::kHarvested) != 0;
 			SKSE::log::info("jobs: {} picked {:08X}: {} in inventory {} -> {}, plant harvested {}", a_pet->GetName() ? a_pet->GetName() : "?", a_plant->GetFormID(),
 				flora->produceItem->GetName() ? flora->produceItem->GetName() : "?", had, now, harvested);
+			// the produce can be a leveled list or arrive a moment later: log what really changed in the whole inventory, now and 1.5 s on
+			{
+				std::map<RE::FormID, std::int32_t> snap;
+				for (const auto& [obj, n] : before) {
+					snap[obj->GetFormID()] = n;
+				}
+				const auto petId = a_pet->GetFormID();
+				const auto plantId = a_plant->GetFormID();
+				const auto produceId = flora->produceItem->GetFormID();
+				const auto produceType = flora->produceItem->GetFormType();
+				std::thread([snap, petId, plantId, produceId, produceType]() {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+					SKSE::GetTaskInterface()->AddTask([snap, petId, plantId, produceId, produceType]() {
+						auto* pet = RE::TESForm::LookupByID<RE::Actor>(petId);
+						if (!pet) {
+							return;
+						}
+						std::string gained;
+						for (const auto& [obj, n] : pet->GetInventoryCounts()) {
+							const auto it = snap.find(obj->GetFormID());
+							const int  was = it != snap.end() ? it->second : 0;
+							if (n > was) {
+								gained += std::format(" {}x {} [{:08X}]", n - was, obj->GetName() ? obj->GetName() : "?", obj->GetFormID());
+							}
+						}
+						SKSE::log::info("jobs: 1.5 s after picking {:08X} (produce form {:08X}, type {}) the pet gained:{}", plantId, produceId, static_cast<int>(produceType), gained.empty() ? " nothing" : gained);
+					});
+				}).detach();
+			}
 			return now > had || harvested;
 		}
 
@@ -342,9 +414,10 @@ namespace Jobs
 			Job         j;
 			j.pet = pet->GetFormID();
 			j.name = name;
-			j.plants = FindPlants(pet, cfg.range, cfg.maxItems);
+			const bool fishing = IsBear(Pets::SpeciesNameOf(pet));
+			j.plants = FindPlants(pet, cfg.range, cfg.maxItems, fishing);
 			if (j.plants.empty()) {
-				Note(name + " finds nothing to gather nearby.");
+				Note(name + (fishing ? " finds no fish nearby." : " finds nothing to gather nearby."));
 				SKSE::log::info("jobs: {} [{:08X}] found no plants within {:.0f} units", name, j.pet, cfg.range);
 				return false;
 			}
@@ -356,7 +429,7 @@ namespace Jobs
 				return false;
 			}
 			SKSE::log::info("jobs: {} [{:08X}] ({}) sets out for {} plant(s), staying away {:.2f} game hours", name, j.pet, cls, j.plants.size(), cfg.gameHours);
-			Note(std::format("{} sets out to gather.", name));
+			Note(std::format("{} sets out to {}.", name, fishing ? "fish" : "gather"));
 			g_jobs.push_back(std::move(j));
 			StartTicker();
 			return true;
@@ -378,7 +451,7 @@ namespace Jobs
 					continue;
 				}
 				const std::string cls = Pets::ClassOf(actor.get());
-				if (cls != "gatherer" && cls != "scavenger") {
+				if (!CanGather(actor.get())) {
 					continue;
 				}
 				++pets;
@@ -422,12 +495,20 @@ namespace Jobs
 			return false;
 		}
 		const std::string cls = Pets::ClassOf(a_pet);
-		if (cls != "gatherer" && cls != "scavenger") {
+		if (!CanGather(a_pet)) {
 			Note(std::string(a_pet->GetName() ? a_pet->GetName() : "Your pet") + " does not gather.");
 			return false;
 		}
 		return StartFor(a_pet, cls);
 	}
+
+	bool CanGather(RE::Actor* a_pet)
+	{
+		const std::string cls = Pets::ClassOf(a_pet);
+		return cls == "gatherer" || cls == "scavenger" || IsBear(Pets::SpeciesNameOf(a_pet));
+	}
+
+	const char* GatherLabel(RE::Actor* a_pet) { return IsBear(Pets::SpeciesNameOf(a_pet)) ? "Go fishing" : "Gather what you can find"; }
 
 	void Init()
 	{
