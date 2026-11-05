@@ -203,7 +203,7 @@ namespace PetMenu
 				me.keys.push_back({ { RE::INPUT_DEVICE::kKeyboard, static_cast<SkyPromptAPI::ButtonID>(code) } });
 			}
 			for (std::size_t i = 0; i < me.actions.size(); ++i) {
-				me.prompts.emplace_back(me.texts[i], static_cast<SkyPromptAPI::EventID>(1), static_cast<SkyPromptAPI::ActionID>(i), SkyPromptAPI::PromptType::kSinglePress, a_pet,
+				me.prompts.emplace_back(me.texts[i], static_cast<SkyPromptAPI::EventID>(i + 1), static_cast<SkyPromptAPI::ActionID>(i), SkyPromptAPI::PromptType::kSinglePress, a_pet,
 					std::span<const std::pair<RE::INPUT_DEVICE, SkyPromptAPI::ButtonID>>(me.keys[i]));
 			}
 			if (!SkyPromptAPI::SendPrompt(&me, me.client)) {
