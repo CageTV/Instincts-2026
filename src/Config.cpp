@@ -21,6 +21,7 @@ namespace Config
 		Spike  spike;
 		Jobs   jobs;
 		Menu   menu;
+		Widget widget;
 		const auto kFile = std::filesystem::path("Data/SKSE/Plugins/BeastHarmony/config.json");
 	}
 
@@ -31,6 +32,7 @@ namespace Config
 	Spike&  GetSpike() { return spike; }
 	Jobs&   GetJobs() { return jobs; }
 	Menu&   GetMenu() { return menu; }
+	Widget& GetWidget() { return widget; }
 
 	void Load()
 	{
@@ -56,6 +58,11 @@ namespace Config
 			cfg.levelGreat = l.value("great", cfg.levelGreat);
 			cfg.levelHuge = l.value("huge", cfg.levelHuge);
 			cfg.slotLimit = std::clamp(s.value("slotLimit", cfg.slotLimit), 1, 10);
+			const auto wj = j.value("widget", json::object());
+			widget.enabled = wj.value("enabled", widget.enabled);
+			widget.x = std::clamp(wj.value("x", widget.x), 0.0f, 1.0f);
+			widget.y = std::clamp(wj.value("y", widget.y), 0.0f, 1.0f);
+			widget.scale = std::clamp(wj.value("scale", widget.scale), 0.5f, 3.0f);
 			const auto pj = j.value("pets", json::object());
 			pets.enabled = pj.value("enabled", pets.enabled);
 			pets.scanSeconds = pj.value("scanSeconds", pets.scanSeconds);
@@ -112,6 +119,7 @@ namespace Config
 		const auto wr = [](const ClassAI& ai) { return json{ { "aggression", ai.aggression }, { "confidence", ai.confidence }, { "assistance", ai.assistance } }; };
 		j["pets"] = { { "enabled", pets.enabled }, { "scanSeconds", pets.scanSeconds }, { "copyLook", pets.copyLook }, { "fighter", wr(pets.fighter) }, { "scavenger", wr(pets.scavenger) }, { "gatherer", wr(pets.gatherer) }, { "producer", wr(pets.producer) } };
 		j["activationBox"] = { { "skip", box.skip }, { "delayFrames", box.delayFrames }, { "label", box.label } };
+		j["widget"] = { { "enabled", widget.enabled }, { "x", widget.x }, { "y", widget.y }, { "scale", widget.scale } };
 		j["diet"] = { { "enabled", diet.enabled } };
 		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius }, { "sound", jobs.sound }, { "soundVolume", jobs.soundVolume } };
 		j["menu"] = { { "useSkyPrompt", menu.useSkyPrompt }, { "keyGather", menu.keyGather }, { "keyOther", menu.keyOther }, { "keyCancel", menu.keyCancel }, { "seconds", menu.seconds } };

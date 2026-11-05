@@ -84,6 +84,15 @@ namespace Config
 	};
 
 	// the pet command list ("Do something for me"): SkyPrompt prompts when SkyPrompt is installed, else a message box
+	// On-screen indicator that the knock-out (Taming Mode) is active; x / y are the top-left corner as fractions of the screen.
+	struct Widget
+	{
+		bool  enabled = true;
+		float x = 0.02f;
+		float y = 0.30f;
+		float scale = 1.0f;
+	};
+
 	struct Menu
 	{
 		bool  useSkyPrompt = true;
@@ -100,6 +109,7 @@ namespace Config
 	Spike&  GetSpike();
 	Jobs&   GetJobs();
 	Menu&   GetMenu();
+	Widget& GetWidget();
 	void    Load();
 	void    Save();
 }

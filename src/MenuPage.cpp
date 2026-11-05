@@ -8,6 +8,7 @@
 #include "MenuPage.h"
 #include "Config.h"
 #include "KeyPicker.h"
+#include "Widget.h"
 
 namespace MenuPage
 {
@@ -44,6 +45,35 @@ namespace MenuPage
 			}
 			auto& sub = Config::Get();
 			if (KeyPicker::Field("bh_taming", "Taming Mode on / off:", &sub.toggleKey)) {
+				changed = true;
+			}
+
+			ImGuiMCP::SeparatorText("Knock-out indicator");
+			auto& wd = Config::GetWidget();
+			if (ImGuiMCP::Checkbox("Show the indicator while the knock-out is active##bh_w", &wd.enabled)) {
+				changed = true;
+			}
+			bool editing = Widget::Editing();
+			if (ImGuiMCP::Checkbox("Move it with the mouse (drag the preview anywhere, then untick)##bh_wm", &editing)) {
+				Widget::SetEditing(editing);
+			}
+			float px = wd.x * 100.0f;
+			float py = wd.y * 100.0f;
+			if (ImGuiMCP::SliderFloat("Left (% of the screen)##bh_wx", &px, 0.0f, 100.0f, "%.1f")) {
+				wd.x = px / 100.0f;
+				changed = true;
+			}
+			if (ImGuiMCP::SliderFloat("Top (% of the screen)##bh_wy", &py, 0.0f, 100.0f, "%.1f")) {
+				wd.y = py / 100.0f;
+				changed = true;
+			}
+			if (ImGuiMCP::SliderFloat("Size##bh_ws", &wd.scale, 0.5f, 3.0f, "%.2f")) {
+				changed = true;
+			}
+			if (ImGuiMCP::Button("Reset position##bh_wr")) {
+				wd.x = 0.02f;
+				wd.y = 0.30f;
+				wd.scale = 1.0f;
 				changed = true;
 			}
 

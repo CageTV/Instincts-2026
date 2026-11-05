@@ -274,6 +274,8 @@ namespace Subdue
 		KeySink keySink;
 	}
 
+	bool KnockoutActive() { return ModeOn(); }
+
 	bool QualifiesForTaming(RE::Actor* a_actor)
 	{
 		if (!F.ok || !a_actor || a_actor->IsDead() || a_actor->IsPlayerTeammate() || PowerOf(a_actor) < 0) {

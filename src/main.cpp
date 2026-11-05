@@ -16,6 +16,7 @@
 #include "Look.h"
 #include "PetMenu.h"
 #include "MenuPage.h"
+#include "Widget.h"
 
 namespace
 {
@@ -57,6 +58,7 @@ namespace
 				Jobs::Init();
 				Look::Init();
 				MenuPage::Init();
+				Widget::Init();
 			} catch (const std::exception& e) {
 				SKSE::log::error("failed: {}", e.what());
 			}
