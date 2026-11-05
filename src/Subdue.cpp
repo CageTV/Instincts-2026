@@ -171,6 +171,10 @@ namespace Subdue
 				}
 				return;
 			}
+			if (PowerOf(t) < 0) {
+				SKSE::log::info("hit on {} [{:08X}], race {} ({:08X}): Instincts has no power for this race, so it cannot be tamed and the knock-out rule ignores it", t->GetName() ? t->GetName() : "?", a_id,
+					t->GetRace() ? t->GetRace()->GetFormEditorID() : "?", t->GetRace() ? t->GetRace()->GetFormID() : 0);
+			}
 			if (PowerOf(t) >= 0) {
 				SKSE::log::info("hit on {}: {:.0f}% health, weapon {}, knocked out {}, already decided {}", t->GetName() ? t->GetName() : "?", 100.0f * hp / maxHp, WeaponName(a_weapon), subdued ? "yes" : "no",
 					t->IsInFaction(F.rolled) ? "yes" : "no");

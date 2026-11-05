@@ -103,6 +103,9 @@ namespace PetMenu
 				const auto id = pet;
 				SKSE::log::info("menu: prompt {} accepted for pet {:08X}", idx, id);
 				SKSE::GetTaskInterface()->AddTask([act, id]() {
+					if (Get().prompts.empty()) {
+						return;  // the key sink below already handled this press
+					}
 					Hide();
 					Perform(act, id);
 				});
@@ -127,6 +130,42 @@ namespace PetMenu
 			}
 		};
 
+		// Fallback: SkyPrompt did not report presses of some keys (F2-F4 in the 2026-11-05 test), so the shown prompts are also read straight from the keyboard.
+		struct PromptKeySink : RE::BSTEventSink<RE::InputEvent*>
+		{
+			RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* a_events, RE::BSTEventSource<RE::InputEvent*>*) override
+			{
+				auto& me = PromptSink::Get();
+				if (!a_events || me.prompts.empty()) {
+					return RE::BSEventNotifyControl::kContinue;
+				}
+				for (auto* e = *a_events; e; e = e->next) {
+					const auto* b = e->AsButtonEvent();
+					if (!b || !b->IsDown() || b->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {
+						continue;
+					}
+					const auto code = b->GetIDCode();
+					for (std::size_t i = 0; i < me.keys.size() && i < me.actions.size(); ++i) {
+						if (!me.keys[i].empty() && me.keys[i][0].second == code) {
+							const auto act = me.actions[i];
+							const auto id  = me.pet;
+							SKSE::log::info("menu: key {:#x} pressed, action {} for pet {:08X} (read from the keyboard)", code, i, id);
+							SKSE::GetTaskInterface()->AddTask([act, id]() {
+								if (PromptSink::Get().prompts.empty()) {
+									return;
+								}
+								PromptSink::Hide();
+								Perform(act, id);
+							});
+							return RE::BSEventNotifyControl::kContinue;
+						}
+					}
+				}
+				return RE::BSEventNotifyControl::kContinue;
+			}
+		};
+		PromptKeySink promptKeySink;
+
 		bool ShowPrompts(RE::FormID a_pet)
 		{
 			auto* pet = RE::TESForm::LookupByID<RE::Actor>(a_pet);
@@ -143,6 +182,13 @@ namespace PetMenu
 				SKSE::log::info("menu: SkyPrompt client id {}", me.client);
 			}
 			PromptSink::Hide();
+			static bool keySinkAdded = false;
+			if (!keySinkAdded) {
+				if (auto* idm = RE::BSInputDeviceManager::GetSingleton()) {
+					idm->AddEventSink(&promptKeySink);
+					keySinkAdded = true;
+				}
+			}
 			const auto& cfg = Config::GetMenu();
 			me.pet = a_pet;
 			me.actions = ActionsFor(pet);
