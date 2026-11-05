@@ -72,7 +72,15 @@ namespace Widget
 			}
 
 			// just the icon (a paw print), white with a soft dark shadow; the preview is dimmer and gets a frame while it is dragged
-			static ImTextureID tex = SKSEMenuFramework::LoadTexture("Data\Interface\BeastHarmony\knockout.png");
+			static ImTextureID tex = nullptr;
+			static int         tries = 0;
+			if (!tex && tries < 60) {
+				++tries;
+				tex = SKSEMenuFramework::LoadTexture("Data\Interface\BeastHarmony\knockout.png");
+				if (tex || tries == 60) {
+					SKSE::log::info("widget: icon texture {}", tex ? "loaded" : "NOT loaded (Data\Interface\BeastHarmony\knockout.png)");
+				}
+			}
 			const bool dim = preview && !active;
 			if (tex) {
 				const float sh = 2.0f * k;
