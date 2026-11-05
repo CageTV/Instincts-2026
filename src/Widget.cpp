@@ -76,9 +76,9 @@ namespace Widget
 			static int         tries = 0;
 			if (!tex && tries < 60) {
 				++tries;
-				tex = SKSEMenuFramework::LoadTexture("Data\Interface\BeastHarmony\knockout.png");
+				tex = SKSEMenuFramework::LoadTexture("Data\\Interface\\BeastHarmony\\knockout.png");
 				if (tex || tries == 60) {
-					SKSE::log::info("widget: icon texture {}", tex ? "loaded" : "NOT loaded (Data\Interface\BeastHarmony\knockout.png)");
+					SKSE::log::info("widget: icon texture {}", tex ? "loaded" : "NOT loaded (Data\\Interface\\BeastHarmony\\knockout.png)");
 				}
 			}
 			const bool dim = preview && !active;
