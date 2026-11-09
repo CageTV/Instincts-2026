@@ -112,6 +112,7 @@ namespace Config
 			jobs.alertRange = std::clamp(jb.value("alertRange", jobs.alertRange), 500.0f, 8000.0f);
 			jobs.alertCooldown = std::clamp(jb.value("alertCooldown", jobs.alertCooldown), 5.0f, 600.0f);
 			jobs.alertScanSeconds = std::clamp(jb.value("alertScanSeconds", jobs.alertScanSeconds), 0.5f, 30.0f);
+			jobs.alertMinHealth = std::clamp(jb.value("alertMinHealth", jobs.alertMinHealth), 0.0f, 5000.0f);
 			const auto mj = j.value("menu", json::object());
 			menu.useSkyPrompt = mj.value("useSkyPrompt", menu.useSkyPrompt);
 			menu.keyGather = mj.value("keyGather", menu.keyGather);
@@ -141,7 +142,7 @@ namespace Config
 			{ "huntRange", jobs.huntRange }, { "huntKills", jobs.huntKills }, { "huntSecondsPerPrey", jobs.huntSecondsPerPrey }, { "huntHealthWolf", jobs.huntHealthWolf },
 			{ "huntHealthCat", jobs.huntHealthCat }, { "huntHealthBear", jobs.huntHealthBear }, { "huntLootFraction", jobs.huntLootFraction },
 				{ "keyAttack", jobs.keyAttack }, { "attackModifier", jobs.attackModifier }, { "attackPetRange", jobs.attackPetRange }, { "attackSeconds", jobs.attackSeconds },
-				{ "alert", jobs.alert }, { "alertRange", jobs.alertRange }, { "alertCooldown", jobs.alertCooldown }, { "alertScanSeconds", jobs.alertScanSeconds } };
+				{ "alert", jobs.alert }, { "alertRange", jobs.alertRange }, { "alertCooldown", jobs.alertCooldown }, { "alertScanSeconds", jobs.alertScanSeconds }, { "alertMinHealth", jobs.alertMinHealth } };
 		j["menu"] = { { "useSkyPrompt", menu.useSkyPrompt }, { "keyGather", menu.keyGather }, { "keyOther", menu.keyOther }, { "keyCancel", menu.keyCancel }, { "keyHunt", menu.keyHunt }, { "seconds", menu.seconds } };
 		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "modifier", spike.modifier }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);

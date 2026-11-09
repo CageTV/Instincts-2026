@@ -99,6 +99,7 @@ namespace Config
 		float alertRange = 3000.0f;        // how far from the wolf it notices (about 43 m)
 		float alertCooldown = 40.0f;       // real seconds before the same one is announced again
 		float alertScanSeconds = 2.0f;
+		float alertMinHealth = 40.0f;      // ignores creatures with less health than this (rats, mudcrabs, skeevers); 0 = warn of everything
 	};
 
 	// the pet command list ("Do something for me"): SkyPrompt prompts when SkyPrompt is installed, else a message box

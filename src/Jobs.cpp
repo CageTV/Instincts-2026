@@ -876,6 +876,9 @@ namespace Jobs
 				if (!foe->IsHostileToActor(player)) {
 					continue;
 				}
+				if (foe->AsActorValueOwner()->GetPermanentActorValue(RE::ActorValue::kHealth) < cfg.alertMinHealth) {
+					continue;
+				}
 				RE::Actor* by = nullptr;
 				for (auto* s : sentries) {
 					if (s->GetPosition().GetDistance(foe->GetPosition()) < cfg.alertRange) {
