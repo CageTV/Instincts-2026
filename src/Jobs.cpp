@@ -825,6 +825,92 @@ namespace Jobs
 			StartTicker();
 		}
 
+		// ------------------------------------------------------------------ Danger alert (wolves)
+
+		std::map<RE::FormID, std::chrono::steady_clock::time_point> g_alerted;  // game thread only
+		std::atomic<bool>                                           g_alertRunning{ false };
+
+		std::string Where(RE::PlayerCharacter* a_player, RE::TESObjectREFR* a_what)
+		{
+			const auto  d = a_what->GetPosition() - a_player->GetPosition();
+			const float bearing = std::atan2(d.x, d.y);               // 0 = north, clockwise
+			float       rel = bearing - a_player->GetAngleZ();         // relative to where the player faces
+			const float pi = 3.14159265f;
+			while (rel < -pi) rel += 2 * pi;
+			while (rel > pi) rel -= 2 * pi;
+			static const char* kNames[] = { "ahead", "ahead and to the right", "to your right", "behind you, to the right", "behind you", "behind you, to the left", "to your left", "ahead and to the left" };
+			int idx = static_cast<int>(std::lround(rel / (pi / 4.0f)));
+			idx = ((idx % 8) + 8) % 8;
+			return kNames[idx];
+		}
+
+		void AlertScan()
+		{
+			auto* player = RE::PlayerCharacter::GetSingleton();
+			auto* lists = RE::ProcessLists::GetSingleton();
+			auto* ui = RE::UI::GetSingleton();
+			if (!player || !lists || !player->Is3DLoaded() || (ui && ui->GameIsPaused()) || player->IsInCombat()) {
+				return;
+			}
+			const auto& cfg = Config::GetJobs();
+			const auto  now = std::chrono::steady_clock::now();
+			for (auto it = g_alerted.begin(); it != g_alerted.end();) {
+				it = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count() > cfg.alertCooldown ? g_alerted.erase(it) : std::next(it);
+			}
+			std::vector<RE::Actor*> sentries;
+			for (auto& handle : lists->highActorHandles) {
+				auto* a = handle.get().get();
+				if (a && a != player && !a->IsDead() && a->Is3DLoaded() && !a->IsInCombat() && Pets::ClassOf(a) == "fighter" && Pets::SpeciesNameOf(a).find("wolf") != std::string::npos &&
+					a->GetPosition().GetDistance(player->GetPosition()) < 3500.0f) {
+					sentries.push_back(a);
+				}
+			}
+			if (sentries.empty()) {
+				return;
+			}
+			for (auto& handle : lists->highActorHandles) {
+				auto* foe = handle.get().get();
+				if (!foe || foe == player || foe->IsDead() || foe->IsDisabled() || !foe->Is3DLoaded() || foe->IsPlayerTeammate() || !Pets::ClassOf(foe).empty() || g_alerted.contains(foe->GetFormID())) {
+					continue;
+				}
+				if (!foe->IsHostileToActor(player)) {
+					continue;
+				}
+				RE::Actor* by = nullptr;
+				for (auto* s : sentries) {
+					if (s->GetPosition().GetDistance(foe->GetPosition()) < cfg.alertRange) {
+						by = s;
+						break;
+					}
+				}
+				if (!by) {
+					continue;
+				}
+				// one warning per scan: the rest of the pack follow in the next scans, each with its own cooldown
+				g_alerted[foe->GetFormID()] = now;
+				const std::string where = Where(player, foe);
+				SKSE::log::info("alert: {} [{:08X}] warns of {} [{:08X}] ({}), {:.0f} units from the player", by->GetName() ? by->GetName() : "?", by->GetFormID(), foe->GetName() ? foe->GetName() : "?", foe->GetFormID(), where, foe->GetPosition().GetDistance(player->GetPosition()));
+				PlayDone(by);
+				Note(std::format("{} warns of danger: {} {}.", by->GetName() ? by->GetName() : "Your wolf", foe->GetName() ? foe->GetName() : "something", where));
+				return;
+			}
+		}
+
+		void StartAlerts()
+		{
+			if (g_alertRunning.exchange(true)) {
+				return;
+			}
+			std::thread([]() {
+				while (true) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(Config::GetJobs().alertScanSeconds * 1000.0f)));
+					SKSE::GetTaskInterface()->AddTask([]() {
+						try { AlertScan(); } catch (const std::exception& e) { SKSE::log::error("alert scan: {}", e.what()); }
+					});
+				}
+			}).detach();
+		}
+
 		struct KeySink : RE::BSTEventSink<RE::InputEvent*>
 		{
 			RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* a_events, RE::BSTEventSource<RE::InputEvent*>*) override
@@ -897,6 +983,10 @@ namespace Jobs
 		}
 		if (auto* input = RE::BSInputDeviceManager::GetSingleton()) {
 			input->AddEventSink(&keySink);
+			if (Config::GetJobs().alert) {
+				StartAlerts();
+				SKSE::log::info("alert: wolves warn of hostile creatures within {:.0f} units of them", Config::GetJobs().alertRange);
+			}
 			SKSE::log::info("jobs: on, key {} sends every nearby gatherer / scavenger pet out to gather", Config::GetJobs().key);
 		}
 	}

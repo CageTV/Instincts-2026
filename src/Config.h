@@ -94,6 +94,11 @@ namespace Config
 		int   attackModifier = 0;
 		float attackPetRange = 4000.0f;    // only pets this close to the player answer
 		float attackSeconds = 60.0f;       // it stops chasing after this many real seconds
+		// Danger alert: a tamed wolf near the player warns (its sound + a HUD line with the direction) when a hostile creature or person is near it
+		bool  alert = true;
+		float alertRange = 3000.0f;        // how far from the wolf it notices (about 43 m)
+		float alertCooldown = 40.0f;       // real seconds before the same one is announced again
+		float alertScanSeconds = 2.0f;
 	};
 
 	// the pet command list ("Do something for me"): SkyPrompt prompts when SkyPrompt is installed, else a message box
