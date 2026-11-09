@@ -28,4 +28,8 @@ namespace Jobs
 
 	// true for a pet that can hunt (fighter class and a species with a prey size)
 	bool CanHunt(RE::Actor* a_pet);
+
+	// Attack my target: every tamed fighter pet near the player goes for the creature under the crosshair (key in config jobs.keyAttack).
+	// Refuses followers, essential or protected actors and anyone who is not hostile to the player or a wild animal. Game thread only.
+	void AttackTarget();
 }

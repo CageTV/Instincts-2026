@@ -89,6 +89,11 @@ namespace Config
 		float huntHealthCat = 130.0f;      //   big cats small to medium game,
 		float huntHealthBear = 300.0f;     //   bears any size
 		float huntLootFraction = 0.25f;    // the pet takes at most this share of its carry weight from a carcass
+		// Attack my target: the key sends every nearby fighter pet at the creature under the crosshair
+		int   keyAttack = 0x22;            // 0x22 = G
+		int   attackModifier = 0;
+		float attackPetRange = 4000.0f;    // only pets this close to the player answer
+		float attackSeconds = 60.0f;       // it stops chasing after this many real seconds
 	};
 
 	// the pet command list ("Do something for me"): SkyPrompt prompts when SkyPrompt is installed, else a message box

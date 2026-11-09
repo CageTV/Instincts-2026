@@ -104,6 +104,10 @@ namespace Config
 			jobs.huntHealthCat = std::clamp(jb.value("huntHealthCat", jobs.huntHealthCat), 1.0f, 5000.0f);
 			jobs.huntHealthBear = std::clamp(jb.value("huntHealthBear", jobs.huntHealthBear), 1.0f, 5000.0f);
 			jobs.huntLootFraction = std::clamp(jb.value("huntLootFraction", jobs.huntLootFraction), 0.0f, 1.0f);
+			jobs.keyAttack = jb.value("keyAttack", jobs.keyAttack);
+			jobs.attackModifier = jb.value("attackModifier", jobs.attackModifier);
+			jobs.attackPetRange = std::clamp(jb.value("attackPetRange", jobs.attackPetRange), 500.0f, 10000.0f);
+			jobs.attackSeconds = std::clamp(jb.value("attackSeconds", jobs.attackSeconds), 10.0f, 600.0f);
 			const auto mj = j.value("menu", json::object());
 			menu.useSkyPrompt = mj.value("useSkyPrompt", menu.useSkyPrompt);
 			menu.keyGather = mj.value("keyGather", menu.keyGather);
@@ -131,7 +135,8 @@ namespace Config
 		j["diet"] = { { "enabled", diet.enabled } };
 		j["jobs"] = { { "enabled", jobs.enabled }, { "key", jobs.key }, { "modifier", jobs.modifier }, { "range", jobs.range }, { "maxItems", jobs.maxItems }, { "gameHours", jobs.gameHours }, { "arriveRadius", jobs.arriveRadius }, { "sound", jobs.sound }, { "soundVolume", jobs.soundVolume },
 			{ "huntRange", jobs.huntRange }, { "huntKills", jobs.huntKills }, { "huntSecondsPerPrey", jobs.huntSecondsPerPrey }, { "huntHealthWolf", jobs.huntHealthWolf },
-			{ "huntHealthCat", jobs.huntHealthCat }, { "huntHealthBear", jobs.huntHealthBear }, { "huntLootFraction", jobs.huntLootFraction } };
+			{ "huntHealthCat", jobs.huntHealthCat }, { "huntHealthBear", jobs.huntHealthBear }, { "huntLootFraction", jobs.huntLootFraction },
+				{ "keyAttack", jobs.keyAttack }, { "attackModifier", jobs.attackModifier }, { "attackPetRange", jobs.attackPetRange }, { "attackSeconds", jobs.attackSeconds } };
 		j["menu"] = { { "useSkyPrompt", menu.useSkyPrompt }, { "keyGather", menu.keyGather }, { "keyOther", menu.keyOther }, { "keyCancel", menu.keyCancel }, { "keyHunt", menu.keyHunt }, { "seconds", menu.seconds } };
 		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "modifier", spike.modifier }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);

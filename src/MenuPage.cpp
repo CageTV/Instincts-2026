@@ -46,6 +46,9 @@ namespace MenuPage
 			if (KeyPicker::Field("bh_jobs", "Send every nearby gatherer / scavenger pet out:", &jobs.key)) {
 				changed = true;
 			}
+			if (KeyPicker::Field("bh_atk", "Attack my target (fighter pets go for the creature under the crosshair):", &jobs.keyAttack)) {
+				changed = true;
+			}
 			auto& sub = Config::Get();
 			if (KeyPicker::Field("bh_taming", "Taming Mode on / off:", &sub.toggleKey)) {
 				changed = true;

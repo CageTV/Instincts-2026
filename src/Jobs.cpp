@@ -30,7 +30,7 @@ namespace Jobs
 		constexpr float               kBasis = 50.0f;
 
 		enum class Phase { Walking, Dwelling, Returning, Hunting };
-		enum class Kind { Gather, Hunt };
+		enum class Kind { Gather, Hunt, Attack };
 
 		struct Job
 		{
@@ -511,6 +511,58 @@ namespace Jobs
 				return false;
 			}
 
+			// ------------------------------------------------------------------ Attack my target
+
+			// Why the creature under the crosshair may NOT be attacked by the pets: "" = it may. Hostile to the player, or a wild animal nobody owns.
+			std::string AttackVerdict(RE::Actor* a_target, RE::PlayerCharacter* a_player)
+			{
+				if (!a_target || a_target == a_player) {
+					return "no creature under the crosshair";
+				}
+				if (a_target->IsDead()) {
+					return "already dead";
+				}
+				if (a_target->IsPlayerTeammate() || !Pets::ClassOf(a_target).empty()) {
+					return "a follower or a pet";
+				}
+				if (a_target->IsEssential() || a_target->IsProtected()) {
+					return "essential or protected";
+				}
+				if (a_target->IsHostileToActor(a_player)) {
+					return {};
+				}
+				const auto* race = a_target->GetRace();
+				if (race && race->HasKeywordString("ActorTypeAnimal"sv) && !a_target->GetCrimeFaction() && !a_target->GetOwner()) {
+					return {};
+				}
+				return "not hostile, and not a wild animal";
+			}
+
+			bool AttackStep(Job& j, RE::Actor* a_pet)
+			{
+				const auto& cfg = Config::GetJobs();
+				const auto  now = std::chrono::steady_clock::now();
+				auto*       target = RE::TESForm::LookupByID<RE::Actor>(j.prey);
+				const auto  secs = std::chrono::duration_cast<std::chrono::seconds>(now - j.preyStart).count();
+				const char* over = nullptr;
+				if (!target || target->IsDead() || target->IsDisabled() || !target->Is3DLoaded()) {
+					over = "target down or gone";
+				} else if (static_cast<float>(secs) > cfg.attackSeconds) {
+					over = "took too long";
+				}
+				if (over) {
+					a_pet->StopCombat();
+					SKSE::log::info("attack: {} [{:08X}] is done ({}, {}s)", j.name, j.pet, over, secs);
+					return true;
+				}
+				// the engine drops the fight now and then (target out of sight): tell the pet again
+				if (!a_pet->IsInCombat() && std::chrono::duration_cast<std::chrono::seconds>(now - j.lastEngage).count() >= 3) {
+					j.lastEngage = now;
+					a_pet->StartCombat(target);
+				}
+				return false;
+			}
+
 			// returns true when the job is finished and should be removed
 		bool Step(Job& j)
 		{
@@ -520,6 +572,9 @@ namespace Jobs
 				ReleaseAll(j);
 				SKSE::log::info("jobs: {} [{:08X}] gone, trip dropped", j.name, j.pet);
 				return true;
+			}
+			if (j.kind == Kind::Attack) {
+				return AttackStep(j, pet);
 			}
 			if (j.kind == Kind::Hunt && j.phase == Phase::Hunting) {
 					return HuntStep(j, pet);
@@ -719,6 +774,57 @@ namespace Jobs
 			}
 		}
 
+		void AttackTargetImpl()
+		{
+			auto* player = RE::PlayerCharacter::GetSingleton();
+			auto* lists = RE::ProcessLists::GetSingleton();
+			if (!player || !lists || !Connect()) {
+				return;
+			}
+			const auto* pick = RE::CrosshairPickData::GetSingleton();
+			const auto  ref = pick ? pick->GetActiveTarget().get() : nullptr;
+			auto*       target = ref ? ref->As<RE::Actor>() : nullptr;
+			const auto  why = AttackVerdict(target, player);
+			if (!why.empty()) {
+				SKSE::log::info("attack: refused ({})", why);
+				Note(target ? std::format("Your pets will not attack {}: {}.", target->GetName() ? target->GetName() : "that", why) : std::string("Aim the crosshair at a creature first."));
+				return;
+			}
+			const auto& cfg = Config::GetJobs();
+			int         sent = 0;
+			for (auto& handle : lists->highActorHandles) {
+				const auto actor = handle.get();
+				auto*      pet = actor.get();
+				if (!pet || pet == player || pet == target || pet->IsDead() || !pet->Is3DLoaded() || Pets::ClassOf(pet) != "fighter") {
+					continue;
+				}
+				if (pet->GetPosition().GetDistance(player->GetPosition()) > cfg.attackPetRange) {
+					continue;
+				}
+				if (std::ranges::any_of(g_jobs, [&](const Job& o) { return o.pet == pet->GetFormID() && o.kind != Kind::Attack; })) {
+					continue;  // out on a gather or hunt trip
+				}
+				std::erase_if(g_jobs, [&](const Job& o) { return o.pet == pet->GetFormID(); });  // a second order replaces the first
+				Job j;
+				j.pet = pet->GetFormID();
+				j.name = pet->GetName() ? pet->GetName() : "Your pet";
+				j.kind = Kind::Attack;
+				j.phase = Phase::Hunting;
+				j.prey = target->GetFormID();
+				j.preyStart = j.lastEngage = std::chrono::steady_clock::now();
+				const bool ok = pet->StartCombat(target);
+				SKSE::log::info("attack: {} [{:08X}] ({}) goes for {} [{:08X}] (StartCombat {})", j.name, j.pet, Pets::SpeciesNameOf(pet), target->GetName() ? target->GetName() : "?", j.prey, ok);
+				g_jobs.push_back(std::move(j));
+				++sent;
+			}
+			if (sent == 0) {
+				Note("None of your fighter pets are close enough.");
+				return;
+			}
+			Note(std::format("{} pet(s) attack {}.", sent, target->GetName() ? target->GetName() : "your target"));
+			StartTicker();
+		}
+
 		struct KeySink : RE::BSTEventSink<RE::InputEvent*>
 		{
 			RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* a_events, RE::BSTEventSource<RE::InputEvent*>*) override
@@ -728,6 +834,12 @@ namespace Jobs
 				}
 				for (auto* e = *a_events; e; e = e->next) {
 					const auto* b = e->AsButtonEvent();
+					if (b && b->IsDown() && b->GetDevice() == RE::INPUT_DEVICE::kKeyboard && static_cast<int>(b->GetIDCode()) == Config::GetJobs().keyAttack && Keys::ModifierHeld(Config::GetJobs().attackModifier)) {
+						auto* ui = RE::UI::GetSingleton();
+						if (ui && !ui->GameIsPaused()) {
+							SKSE::GetTaskInterface()->AddTask([]() { AttackTargetImpl(); });
+						}
+					}
 					if (b && b->IsDown() && b->GetDevice() == RE::INPUT_DEVICE::kKeyboard && static_cast<int>(b->GetIDCode()) == Config::GetJobs().key && Keys::ModifierHeld(Config::GetJobs().modifier)) {
 						auto* ui = RE::UI::GetSingleton();
 						if (ui && !ui->GameIsPaused()) {
@@ -775,6 +887,8 @@ namespace Jobs
 		}
 		return StartHunt(a_pet);
 	}
+
+	void AttackTarget() { AttackTargetImpl(); }
 
 	void Init()
 	{
