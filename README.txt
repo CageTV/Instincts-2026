@@ -18,3 +18,9 @@ Needs only Instincts itself. Remove the folder and everything is as Kheree made 
    - Pets eat food from their own inventory: once per game hour, right after the hunger decay, a pet at or below Hunger 50 (AutoEatBelow) eats until Satisfied, Hunger 70 (AutoEatUntil):
      food its species accepts (the feeding menu's list), one item at a time via Instincts' own ReceiveFood, up to 3 per hour (AutoEatMaxMeals), not in combat.
      AutoEatBelow = 0 switches it off. (Mumirnik_Quest_Instincts_PetStats, tools/patch_autoeat.py)
+3. Mumirnik_Quest_UseFurniture (rebuilt from the decompiled original, src/Mumirnik_Quest_UseFurniture.psc): choosing "Train" on a pet only opened the training
+   menu when the player had sat down on the Ferry Seat the script places. On some lists the sit never completes (sit state 2, "waiting for the sit
+   animation", furniture camera stuck, no control) and the original script then deleted the seat under the player, so training was impossible. The seat is
+   cosmetic: the training menu (Mumirnik_Quest_Instincts_PetTraining.Train) is only message boxes. New property SkipSitting (default True) trains without the
+   seat; with SkipSitting = False the seat is kept while the engine still has the player in a sit state, the camera is put back, and the log shows
+   "[InstinctsSitFix] ..." lines. Found 2026-11-10; needs only Instincts itself.
