@@ -7,7 +7,7 @@ ModHeader:
   Flags:
   - Small
   Author: CageTV
-  Description: "Fixes for Instincts - Animal Taming in Skyrim (Taming perk: one Attempt to Tame choice; Kyne's Peace skips your tamed animals)."
+  Description: "Fixes for Instincts - Animal Taming in Skyrim (Taming perk: one Attempt to Tame choice; Kyne's Peace and the Spriggan Call of the Wild skip your tamed animals)."
   MasterReferences:
   - Master: Skyrim.esm
     FileSize: 0
