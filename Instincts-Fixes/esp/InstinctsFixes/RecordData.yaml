@@ -1,0 +1,22 @@
+SpriggitSource:
+  PackageName: Spriggit.Yaml.Skyrim
+  Version: 0.41
+ModKey: Instincts - Fixes.esp
+GameRelease: SkyrimSE
+ModHeader:
+  Flags:
+  - Small
+  Author: CageTV
+  Description: "Fixes for Instincts - Animal Taming in Skyrim (patch of its Taming perk so the Attempt to Tame choice appears once)."
+  MasterReferences:
+  - Master: Skyrim.esm
+    FileSize: 0
+  - Master: Update.esm
+    FileSize: 0
+  - Master: Dawnguard.esm
+    FileSize: 0
+  - Master: Dragonborn.esm
+    FileSize: 0
+  - Master: Instincts - Animal Taming in Skyrim.esp
+    FileSize: 0
+  INTV: 1
