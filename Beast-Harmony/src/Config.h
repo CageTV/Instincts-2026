@@ -2,11 +2,13 @@
  * Beast Harmony
  * Copyright (c) 2026 CageTV
  *
- * Released under the MIT License; see LICENSE.txt.
+ * Licensed under the GNU General Public License, version 3 or later; see LICENSE.
  */
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 namespace Config
 {
@@ -58,6 +60,24 @@ namespace Config
 	struct Diet
 	{
 		bool enabled = true;
+	};
+
+	// what a pet gets out of food: the hunger a food item restores is multiplied by 1 + the bonus of the player's race (Feeding.h)
+	struct RaceBonus
+	{
+		std::string   name;     // only for the config file and the log
+		std::string   file;     // plugin that defines the race
+		std::uint32_t localId;  // form id inside that plugin
+		float         bonus;    // 0.15 = 15 % more hunger per item
+	};
+
+	struct Feeding
+	{
+		bool                  enabled = true;
+		std::vector<RaceBonus> races{
+			{ "Bosmer", "Skyrim.esm", 0x013749, 0.15f },
+			{ "Bosmer (vampire)", "Skyrim.esm", 0x088884, 0.15f },
+		};
 	};
 
 	// Harbinger test (see Spike.h): off by default
@@ -126,6 +146,7 @@ namespace Config
 	Pets&   GetPets();
 	Box&    GetBox();
 	Diet&   GetDiet();
+	Feeding& GetFeeding();
 	Spike&  GetSpike();
 	Jobs&   GetJobs();
 	Menu&   GetMenu();

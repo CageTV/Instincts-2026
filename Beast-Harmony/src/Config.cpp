@@ -2,7 +2,7 @@
  * Beast Harmony
  * Copyright (c) 2026 CageTV
  *
- * Released under the MIT License; see LICENSE.txt.
+ * Licensed under the GNU General Public License, version 3 or later; see LICENSE.
  */
 #include "PCH.h"
 #include "Config.h"
@@ -18,6 +18,7 @@ namespace Config
 		Pets   pets;
 		Box    box;
 		Diet   diet;
+		Feeding feeding;
 		Spike  spike;
 		Jobs   jobs;
 		Menu   menu;
@@ -29,6 +30,7 @@ namespace Config
 	Pets&   GetPets() { return pets; }
 	Box&    GetBox() { return box; }
 	Diet&   GetDiet() { return diet; }
+	Feeding& GetFeeding() { return feeding; }
 	Spike&  GetSpike() { return spike; }
 	Jobs&   GetJobs() { return jobs; }
 	Menu&   GetMenu() { return menu; }
@@ -82,6 +84,23 @@ namespace Config
 			box.delayFrames = std::clamp(bj.value("delayFrames", box.delayFrames), 1, 30);
 			box.label = bj.value("label", box.label);
 			diet.enabled = j.value("diet", json::object()).value("enabled", diet.enabled);
+			const auto fj = j.value("feeding", json::object());
+			feeding.enabled = fj.value("enabled", feeding.enabled);
+			if (fj.contains("races") && fj["races"].is_array()) {
+				std::vector<RaceBonus> rs;
+				for (const auto& o : fj["races"]) {
+					RaceBonus r;
+					r.name = o.value("name", std::string{});
+					r.file = o.value("file", std::string{});
+					const auto id = o.value("id", std::string{ "0" });
+					try { r.localId = static_cast<std::uint32_t>(std::stoul(id, nullptr, 0)); } catch (...) { r.localId = 0; }
+					r.bonus = std::clamp(o.value("bonus", 0.0f), 0.0f, 5.0f);
+					if (!r.file.empty() && r.localId) {
+						rs.push_back(std::move(r));
+					}
+				}
+				feeding.races = std::move(rs);
+			}
 			const auto sj = j.value("spike", json::object());
 			spike.enabled = sj.value("enabled", spike.enabled);
 			spike.key = sj.value("key", spike.key);
@@ -144,6 +163,11 @@ namespace Config
 				{ "keyAttack", jobs.keyAttack }, { "attackModifier", jobs.attackModifier }, { "attackPetRange", jobs.attackPetRange }, { "attackSeconds", jobs.attackSeconds },
 				{ "alert", jobs.alert }, { "alertRange", jobs.alertRange }, { "alertCooldown", jobs.alertCooldown }, { "alertScanSeconds", jobs.alertScanSeconds }, { "alertMinHealth", jobs.alertMinHealth } };
 		j["menu"] = { { "useSkyPrompt", menu.useSkyPrompt }, { "keyGather", menu.keyGather }, { "keyOther", menu.keyOther }, { "keyCancel", menu.keyCancel }, { "keyHunt", menu.keyHunt }, { "seconds", menu.seconds } };
+		json fr = json::array();
+		for (const auto& r : feeding.races) {
+			fr.push_back({ { "name", r.name }, { "file", r.file }, { "id", std::format("0x{:06X}", r.localId) }, { "bonus", r.bonus } });
+		}
+		j["feeding"] = { { "enabled", feeding.enabled }, { "_help", "the hunger a food item restores is multiplied by 1 + bonus of the player's race" }, { "races", fr } };
 		j["spike"] = { { "enabled", spike.enabled }, { "key", spike.key }, { "modifier", spike.modifier }, { "distance", spike.distance } };
 		std::ofstream(kFile) << j.dump(2);
 	}

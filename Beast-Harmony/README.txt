@@ -15,3 +15,7 @@ Needs: Instincts - Animal Taming in Skyrim; Instincts - Fixes (this project) for
 
 Credits:
 Knock-out indicator icon: "classes beastmaster" by Maxicons from Noun Project (https://thenounproject.com/icon/classes-beastmaster-2360013/), used under the Noun Project free licence (CC BY 3.0).
+
+FEEDING BONUS BY RACE (BeastHarmony_Feeding.Multiplier, src/Feeding.cpp). The hunger a food item restores for a pet is multiplied by 1 + the bonus of the player's race. Bosmer get 15 % more per item by default (the Wood Elf race and its vampire variant); the table is config.json "feeding" {"enabled", "races": [{"name", "file", "id", "bonus"}]}. The rule lives in the DLL; the patched Instincts feeding script (Instincts - Fixes) only multiplies with the result, and without this DLL feeding is unchanged. It applies to feeding in the gift menu and to the pet eating from its own inventory. Log: "feeding: multiplier ..." in BeastHarmony.log.
+
+LICENCE: GPL-3.0-or-later (LICENSE). The source headers say so; third-party headers keep their own licences (SKSEMenuFramework.h, APMF_API.h).

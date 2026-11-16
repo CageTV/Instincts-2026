@@ -2,7 +2,7 @@
  * Beast Harmony
  * Copyright (c) 2026 CageTV
  *
- * Released under the MIT License; see LICENSE.txt.
+ * Licensed under the GNU General Public License, version 3 or later; see LICENSE.
  */
 #include "PCH.h"
 #include "Config.h"
@@ -15,6 +15,7 @@
 #include "Jobs.h"
 #include "Look.h"
 #include "PetMenu.h"
+#include "Feeding.h"
 #include "MenuPage.h"
 #include "Widget.h"
 
@@ -39,7 +40,8 @@ namespace
 	{
 		Look::Bind(a_vm);
 		PetMenu::Bind(a_vm);
-		SKSE::log::info("papyrus: BeastHarmony_Look.CopyLook and BeastHarmony_Menu.Open registered");
+		Feeding::Bind(a_vm);
+		SKSE::log::info("papyrus: BeastHarmony_Look.CopyLook, BeastHarmony_Menu.Open and BeastHarmony_Feeding.Multiplier registered");
 		return true;
 	}
 

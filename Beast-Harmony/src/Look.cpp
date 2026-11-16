@@ -2,7 +2,7 @@
  * Beast Harmony
  * Copyright (c) 2026 CageTV
  *
- * Released under the MIT License; see LICENSE.txt.
+ * Licensed under the GNU General Public License, version 3 or later; see LICENSE.
  */
 #include "Look.h"
 
