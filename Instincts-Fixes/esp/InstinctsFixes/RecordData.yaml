@@ -7,7 +7,7 @@ ModHeader:
   Flags:
   - Small
   Author: CageTV
-  Description: "Fixes for Instincts - Animal Taming in Skyrim (patch of its Taming perk so the Attempt to Tame choice appears once)."
+  Description: "Fixes for Instincts - Animal Taming in Skyrim (Taming perk: one Attempt to Tame choice; Kyne's Peace skips your tamed animals)."
   MasterReferences:
   - Master: Skyrim.esm
     FileSize: 0
