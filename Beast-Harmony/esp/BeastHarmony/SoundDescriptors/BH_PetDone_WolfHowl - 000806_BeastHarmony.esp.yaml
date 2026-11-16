@@ -1,0 +1,8 @@
+FormKey: 000806:BeastHarmony.esp
+EditorID: BH_PetDone_WolfHowl
+Category: 0172A1:Skyrim.esm
+OutputModel: 07F80C:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\wolf_howl.wav
+Type: Standard
+Priority: 128

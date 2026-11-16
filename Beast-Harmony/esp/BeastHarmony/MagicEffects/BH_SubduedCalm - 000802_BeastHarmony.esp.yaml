@@ -1,0 +1,22 @@
+FormKey: 000802:BeastHarmony.esp
+EditorID: BH_SubduedCalm
+Name:
+  TargetLanguage: English
+  Value: Subdued
+Flags:
+- Recover
+- NoMagnitude
+- NoArea
+- NoHitEffect
+- NoDeathDispel
+BaseCost: 0
+MagicSkill: Illusion
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  Type: Calm
+CastType: FireAndForget
+TargetType: Self
+DualCastScale: 1
+Description:
+  TargetLanguage: English
+  Value: The animal is too dazed to fight.

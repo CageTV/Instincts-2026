@@ -1,0 +1,2770 @@
+#pragma once
+// ─────────────────────────────────────────────────────────────────────────────
+// APMF (AI Package Management Framework) — SKSE inter-plugin C-ABI.
+//
+// This is the ONLY file a client mod shares with APMF. APMF and a client
+// compile SEPARATELY and are STRICTLY separate DLLs. They interact ONLY through
+// this header at runtime. Because the C++ ABI is NOT stable across two separately
+// built DLLs, this surface is deliberately C-ABI: a POD struct of function
+// pointers with POD argument types only (RE::FormID, a plain enum, floats, and the
+// POD APMF_Param below). NO C++ classes, NO STL, NO vtable ever crosses the
+// boundary.
+//
+// APPEND-ONLY CONTRACT. Once shipped, never change or reorder an existing field,
+// enum value, or function-pointer slot in a shipped interface struct -- only
+// APPEND: add new Intent values at the END, add new function-pointer slots at the
+// END of a NEW versioned struct whose leading fields are byte-identical to the
+// previous struct, add new fields at the END of APMF_Param, and bump kABIVersion.
+// A client built against an older ABI must keep working against every later APMF.
+// History: Docs/APMF_API-HISTORY.md#append-only-discipline
+//
+// ── VERSIONING SHAPE (COM-style prefix extension) ──
+// Each ABI revision adds a struct APMF_API_vN whose LEADING members are exactly,
+// in order, the members of APMF_API_v(N-1). Because the layouts share an identical
+// initial sequence, the SAME static object can be handed to every client:
+//   * a v1 client reads it as APMF_API_v1* and sees only the v1 prefix,
+//   * a v2 client reads it as APMF_API_v2* and sees the appended slots too.
+// The `abiVersion` field (first member of every revision) tells a client how far
+// it may safely read. APMF_GetInterface returns the base type (APMF_API_v1*); a
+// newer client checks `p->abiVersion >= N` and reinterpret_casts up to APMF_API_vN.
+//
+// ── How a client obtains the interface (chosen mechanism: exported query fn) ──
+// APMF exports one undecorated C function, "APMF_GetInterface", returning a
+// pointer to a static POD interface (no ownership, never freed). Fetch it once
+// after SKSE load (e.g. your kPostLoad/kDataLoaded), then keep the pointer:
+//
+//     #include "APMF_API.h"
+//     const APMF_API::APMF_API_v4* g_apmf = nullptr;   // pick the newest struct you use
+//     if (HMODULE h = GetModuleHandleA("APMF.dll")) {
+//         auto fn = reinterpret_cast<APMF_API::GetInterface_t>(
+//             GetProcAddress(h, APMF_API::kGetInterfaceExport));
+//         if (fn) {
+//             if (auto* base = fn(APMF_API::kABIVersion)) {          // nullptr on ABI mismatch
+//                 if (base->abiVersion >= 4)
+//                     g_apmf = reinterpret_cast<const APMF_API::APMF_API_v4*>(base);
+//             }
+//         }
+//     }
+//     // If g_apmf is null, APMF is absent or too old — guard every call. (A client
+//     // that only needs v2 checks `>= 2` and casts to APMF_API_v2*; a v3 field like
+//     // Repoint requires `>= 3`; a v4 field like SetSpellAllowList requires `>= 4`.)
+//
+// History: Docs/APMF_API-HISTORY.md#transport-choice
+//
+// ── Threading ──
+// Request/RequestEx/Repoint/Release/SetSpellAllowList/SetEquipSet/SetEquipSetEx/SetEquipScope
+// are SAFE FROM ANY THREAD. They capture POD (a FormID, a copy of the APMF_Param, or — for
+// SetSpellAllowList/SetEquipSet/SetEquipSetEx — a copy of the forms/entries array; for
+// SetEquipScope — a copy of the APMF_EquipScope) and enqueue the
+// work; APMF applies it on the game thread. A client's BSJobs worker may call
+// them directly. The APMF_Param pointer passed to RequestEx/Repoint, and the
+// RE::FormID* passed to SetSpellAllowList/SetEquipSet, and the APMF_EquipEntry*
+// passed to SetEquipSetEx, and the APMF_EquipScope* passed to SetEquipScope, are READ AND COPIED
+// synchronously inside the call — APMF never retains the client's pointer, so a
+// stack temporary/local array is fine.
+//
+// THE ONE EXCEPTION (ABI v11): the two SPACE QUERIES, FindEmptySpace and
+// FindHostilesInSpace, are synchronous and run ONLY on the game's main thread (the
+// player-Update thread). Called from anywhere else they do nothing and return
+// kQuery_NotMainThread. See the "ABI v11: SPACE QUERIES" section below. A
+// kCastFlag_AtPosition RequestEx is still safe from any thread: it is captured and
+// delivered on the game thread like every other request. ABI v18's SenseActor has the
+// same main-thread-only contract (it casts rays); its GetLineOfSight is safe from any
+// thread (a lock-free read). See "ABI v18: LINE OF SIGHT AND AWARENESS".
+//
+// ── Exceptions ──
+// NO exception ever crosses this boundary. Every APMF-side body (Request,
+// RequestEx, Repoint, Release, APMF_GetInterface) is wrapped in a catch-all; a throw
+// degrades to kInvalidHandle / no-op / nullptr, never an unwind into the client's
+// separately compiled DLL (UB).
+// ─────────────────────────────────────────────────────────────────────────────
+#include <cstddef>
+#include <cstdint>
+
+namespace RE {
+    // Identical alias to CommonLib's RE::FormID; a duplicate identical using-alias
+    // is legal, so this header composes with a full CommonLib include.
+    using FormID = std::uint32_t;
+}
+
+namespace APMF_API {
+
+    // ABI history (v10..v31, what each added and how an older APMF degrades). Gate every use on abiVersion >=
+    // N.
+    // History: Docs/APMF_API-HISTORY.md#abi-history
+    inline constexpr std::uint32_t kABIVersion = 31;
+
+    // The exported query function's undecorated name and pointer type.
+    // const APMF_API_v1* APMF_GetInterface(std::uint32_t abiVersion);
+    inline constexpr const char* kGetInterfaceExport = "APMF_GetInterface";
+
+    // A control claim handle. 0 is never a valid handle (returned on refusal).
+    using Handle = std::uint32_t;
+    inline constexpr Handle kInvalidHandle = 0;
+
+    // ABI v4: the bound on SetSpellAllowList's allow-set. Chosen generously above
+    // what a follower's realistic known heal/buff spell count needs (typically
+    // single digits to low teens even for a heavily-modded mage build) -- an
+    // overflow degrades to "the excess spells are treated as non-exempt" (still
+    // denied, never a crash or an unbounded write). See SetSpellAllowList below.
+    inline constexpr std::uint32_t kMaxSpellAllowList = 32;
+
+    // Which FACET a client claims control of on an NPC. APMF MODERATES that facet
+    // (arbitrates who owns it + DENYs competitors); it never generates the behavior --
+    // the client executes with its own mechanisms (design.md Section 1a). Each maps
+    // to one channel family. APPEND-ONLY: never renumber; add new intents at the end.
+    //
+    // Each entry below follows the same shape: the facet, its Mode, and which
+    // APMF_Param field it uses. Three modes exist (design.md Section 1a's three
+    // legal channel actions):
+    //   ARBITRATE -- APMF records who owns the facet. The client executes the
+    //                 behavior with its own mechanism. APMF calls nothing.
+    //   DENY      -- APMF suppresses the losing input at its source (an actor
+    //                 value, a vfunc answer, a package offer). No re-assert.
+    //   PROMOTE   -- a single bounded one-shot call at Engage/Release, no Tick,
+    //                 no re-assert (a stance toggle, a draw/sheathe, an idle).
+    // A facet can combine ARBITRATE with DENY (e.g. casting: APMF records the
+    // claim AND enforces it). See the param-usage table after APMF_Param below
+    // for which Intents actually read a field today vs. accept-and-ignore it.
+    enum Intent : std::uint32_t {
+        kIntent_None          = 0,   // no facet; Request/RequestEx return kInvalidHandle
+
+        kIntent_MovementBlock = 1,   // ch.1  Full stand-still. Mode: DENY (nulls the actor's
+                                     //       own move goal at the source). Param: none.
+        kIntent_Disposition   = 2,   // ch.11 Aggression/confidence/assistance/morality bias.
+                                     //       Mode: DENY (sets the actor values the AI's own
+                                     //       decisions read). Param: fval (reserved).
+        kIntent_Headtrack     = 3,   // ch.5  Look-at target. Mode: DENY, known-incomplete
+                                     //       (owns one headtrack slot of several the AI
+                                     //       writes). Param: form (reserved).
+        kIntent_SelectSpell   = 4,   // ch.8  CLAIM the casting facet. Mode: ARBITRATE + DENY
+                                     //       (the claim's spell is enforced as the actor's
+                                     //       only castable choice; denying a COMPETING
+                                     //       framework's own selection is a future gap).
+                                     //       Param: form (the spell FormID). `ival`, `target`
+                                     //       and `pos` are ACCEPTED-AND-IGNORED on this intent.
+                                     //       `ival` bits 0-2 (the old +ACT mode / drive) are RETIRED and mean
+                                     //       nothing.
+                                     //       History: Docs/APMF_API-HISTORY.md#kintent-selectspell-retired
+                                     //       The bits stay RESERVED and are never reused, so a
+                                     //       client that still sets them is byte-compatible and
+                                     //       simply gets this channel's original gate-only
+                                     //       behaviour: the client's OWN AI casts the selected
+                                     //       spell, APMF only narrows/denies competitors.
+        kIntent_WeaponDrawn   = 5,   // ch.4  Draw/sheathe. Mode: PROMOTE (one-shot, sticky).
+                                     //       Param: none.
+        kIntent_Dialogue      = 6,   // ch.10 Pause the actor's own in-progress dialogue.
+                                     //       Mode: DENY (fires once, no ongoing block).
+                                     //       Param: none.
+        kIntent_Gait          = 7,   // ch.1a Movement speed scale. Mode: DENY (sets the
+                                     //       speed-mult actor value). Param: fval (reserved).
+        kIntent_Detection     = 8,   // ch.16 Silent movement + reduced detect range. Mode:
+                                     //       DENY (sets the detection actor values). Param:
+                                     //       fval (reserved).
+        kIntent_Stance        = 9,   // ch.3  Sneak/crouch. Mode: PROMOTE (one-shot toggle).
+                                     //       Param: ival (reserved).
+        kIntent_CombatTarget  = 10,  // ch.6  CLAIM the combat-target facet. Mode: ARBITRATE
+                                     //       only (the client writes the target itself;
+                                     //       denying a competing framework's own target
+                                     //       write is a future gap). Param: form (the
+                                     //       target actor).
+        kIntent_Idle          = 11,  // ch.12 Play an idle/animation. Mode: PROMOTE.
+                                     //       Param v1 (form 0, every ABI): none -- one
+                                     //       IdleForceDefaultState at engage, nothing at release.
+                                     //       Param v2 (ABI v17): form = a TESIdleForm (an IDLE
+                                     //       record) to play; target = an optional reference to
+                                     //       play it AT (0 = none). ONE AIProcess::PlayIdle(actor,
+                                     //       idle, target) at engage and one per Repoint / owner
+                                     //       change; at release ONE IdleForceDefaultState, and only
+                                     //       when the idle is still HELD (the actor's graph has
+                                     //       not raised IdleStop since the call -- a one-shot idle
+                                     //       has ended by itself and gets nothing). No Tick.
+                                     //       The idle's OWN conditions are evaluated by the engine
+                                     //       against (actor, target): a failing one refuses it.
+                                     //       The client picks the idle; Harbinger never does.
+                                     //       ENDS (released by Harbinger, logged): the form is not
+                                     //       an IDLE, the target is not a loaded reference, the
+                                     //       actor is not loaded / dead / has no AI process, the
+                                     //       engine refused the idle, or the owner died; plus
+                                     //       Release, an unload, a save load or a new game.
+                                     //       REFUSED SYNCHRONOUSLY (form != 0 only; kInvalidHandle,
+                                     //       logged): VR, a runtime other than 1.6.1170 / 1.5.97,
+                                     //       a self-check refusal, before kDataLoaded, or target
+                                     //       == the actor. An APMF older than v17 does NOT refuse
+                                     //       a form: it plays the v1 idle. Check abiVersion >= 17.
+        kIntent_ShoutPower    = 12,  // ch.14 Shout/power selection. Mode: ARBITRATE only
+                                     //       (mirrors ch.6/ch.8, no deny gate yet). Param:
+                                     //       form (the shout/power FormID).
+        kIntent_Equipment     = 13,  // ch.15 Unequip/equip a worn item (the melee-vs-ranged
+                                     //       lever). Mode: DENY (owns the equipped set).
+                                     //       Param: form (optional). No param: deny the
+                                     //       actor's right-hand item (the channel's
+                                     //       default). form set: additionally GATE-ONLY --
+                                     //       deny any spell/staff re-arm while the claim
+                                     //       stands (no engine write for the form itself;
+                                     //       the same underlying hook ch.8's exact-match
+                                     //       deny rides). ival is reserved for a future
+                                     //       hand-slot discriminator.
+        kIntent_CombatAction  = 14,  // ch.7  DENY named combat behavior-tree leaf
+                                     //       CATEGORIES. Mode: DENY (graduated from a
+                                     //       field-proven probe, Docs/PROBE-ALLOWANCE.md).
+                                     //       Param: ival (a CombatActionCategory bitmask,
+                                     //       see below).
+        kIntent_OfferPackage  = 15,  // ch.9  CLAIM the package-offer facet. Mode: DENY
+                                     //       (redirects the package offer to the claimed
+                                     //       package; graduated from a field-proven probe).
+                                     //       Param: form (the TESPackage FormID).
+        kIntent_Cast          = 16,  // ch.8b CLAIM the cast-EXECUTION facet for a bounded window.
+                                     //       ARBITRATE + DENY + COMPOSE (Docs/INVARIANTS.md #20).
+                                     //       Param: see APMF_CastRequest via RequestCast;
+                                     //       RequestEx(form=spell) is the degenerate form (no
+                                     //       target/proxy/TTL -> default TTL).
+                                     //       WHAT IT DOES NOW (feat/ai-cast-seats-impl): while the
+                                     //       claim stands, APMF answers the FIVE engine vfunc seats
+                                     //       that drive the combat AI's own cast decision so the
+                                     //       NPC's OWN AI selects, equips, charges, aims, fires and
+                                     //       channels `spell` at `target` -- a real native animated
+                                     //       cast (0x0F CheckShouldEquip, 0x06 CheckStartCast, 0x0A
+                                     //       GetMagicTarget, 0x07 CheckStopCast, 0x0D
+                                     //       SetupAimController; core/CastSeats.cpp +
+                                     //       core/EquipGate.cpp). APMF STILL FIRES NOTHING: it makes
+                                     //       no EquipSpell/CastSpell/CastSpellImmediate/anim-graph
+                                     //       write of any kind -- every one of those is the engine's
+                                     //       own, from the engine's own behavior tree.
+                                     //       `target` is now LOAD-BEARING (it was RECORD ONLY): seat
+                                     //       0x0A hands it to the engine as the magic target, and
+                                     //       0x0D as the aim override. A kSelf-delivery spell needs
+                                     //       `proxy` (or APMF mints one -- core/CastProxy.h),
+                                     //       because the engine's Self branch always lands on the
+                                     //       caster. Still bounded by TTL auto-release; a cast is
+                                     //       NEVER a package (invisible to ch.9's 0x49 offer).
+        kIntent_EquipAuthority = 17, // ch.17 CLAIM the ENGINE-EQUIP facet, WHOLE (ABI v7, marth
+                                     //       2026-09-15: "a command is sent to APMF with what to
+                                     //       equip and that is enforced until overridden").
+                                     //       Mode: ARBITRATE + DENY + the one #17a-licensed equip.
+                                     //       A STANDING authority: no TTL, ended only by Release.
+                                     //       Param: ival (an EquipAuthFlags bitmask, see below).
+                                     //       The claim alone changes NOTHING -- the client then
+                                     //       DECLARES the worn set with SetEquipSet(handle, ...)
+                                     //       (APMF_API_v7). From that declaration on: APMF equips
+                                     //       every declared item the actor is not already wearing
+                                     //       (once, on the main thread, on each declaration --
+                                     //       never a re-assert loop), and APMF REFUSES every engine
+                                     //       equip of an item that is NOT in the declared set --
+                                     //       outfit re-apply, AI weapon/armor choice, combat
+                                     //       re-arm, RemoveItem re-equip, another plugin's equip
+                                     //       call -- at the ONE non-virtual choke point every
+                                     //       engine equip funnels through (core/EquipSink.cpp;
+                                     //       Docs/INVARIANTS.md #17a). Papyrus/console equips pass
+                                     //       unless kEquipAuth_DenyScript; the PLAYER's own
+                                     //       equips on the actor (the trade/gift menu) pass
+                                     //       unless kEquipAuth_DenyPlayerMenu (ABI v8). Only
+                                     //       ARMO/WEAP/AMMO/LIGH equips are governed at all --
+                                     //       potions, food, scrolls, ingredients and books pass
+                                     //       (ABI v8; see APMF_API_v8). UNEQUIPS are never
+                                     //       denied by this ABI (kEquipAuth_DenyUnequip is
+                                     //       RESERVED and refused). The engine's own in-worker
+                                     //       displacement still handles slot conflicts, so a
+                                     //       declared two-hander displaces a declared shield the
+                                     //       ordinary way. The player is NEVER subject to it.
+                                     //       Declare->enforce (CLAUDE.md principle 4): an empty
+                                     //       declaration (count 0) CLEARS it and the seat passes
+                                     //       everything through again; APMF never invents a set.
+                                     //       ABI v8: the claim is REFUSED (kInvalidHandle) while
+                                     //       the equip seat is not installed (bEquipAuthority=0,
+                                     //       VR, a gated runtime, a site-verify refusal, or before
+                                     //       kDataLoaded) -- a refused claim means KEEP YOUR OWN
+                                     //       EQUIPS; APMF_API_v8::IsEquipAuthorityEnforced tells
+                                     //       observe from enforce for an accepted claim.
+
+        // 18 is DELIBERATELY SKIPPED, not free. A design that is NOT YET ON MAIN
+        // reserves ch.18 for the NPC attack-selection facet; nothing has been
+        // authored for it. Leaving the number unused costs nothing and keeps intent
+        // numbers and channel numbers aligned for every channel that exists.
+        // History: Docs/APMF_API-HISTORY.md#intent-18
+
+        kIntent_Travel        = 19,  // ch.19 WALK this actor to a destination (ABI v10, marth
+                                     //       2026-09-22). Mode: the framework MOVES the actor,
+                                     //       natively, with a package APMF itself ships
+                                     //       (Data/APMF.esl). A STANDING claim: no TTL, ended
+                                     //       only by Release.
+                                     //       Param: form = the DESTINATION's FormID (REQUIRED --
+                                     //       a zero form is refused -- unless ival carries
+                                     //       kTravel_ToPosition, ABI v11); fval = the arrival radius in
+                                     //       game units (0 => the 75u default, clamped to
+                                     //       [50, 512] and the clamp logged); ival = a TravelFlags
+                                     //       bitmask.
+                                     //
+                                     //       A destination is a reference (arrival = within the radius) or a
+                                     //       cell (arrival = in it); a point needs kTravel_ToPosition.
+                                     //       See Docs/APMF_API-REFERENCE.md#kintent-travel-destinations
+                                     //
+                                     //       A leg ends on arrival, on the actor entering combat, or the
+                                     //       destination dying / disabled / unloading (v12: BLOCKED).
+                                     //       See Docs/APMF_API-REFERENCE.md#kintent-travel-ends
+                                     //
+                                     //       ch.19 claims nothing else on your behalf (no target, combat,
+                                     //       equip, aggression).
+                                     //       See Docs/APMF_API-REFERENCE.md#kintent-travel-one-facet
+                                     //       History: Docs/APMF_API-HISTORY.md#kintent-travel-no-combos
+                                     //
+                                     //       Repoint(handle, &param) moves the destination in
+                                     //       place -- no release/re-claim churn. Release ends the
+                                     //       claim and the leg.
+                                     //       TWO REFUSAL TIMINGS, and the difference matters:
+                                     //       * SYNCHRONOUS (RequestEx returns kInvalidHandle
+                                     //         before anything is queued): VR, [Travel]
+                                     //         bTravel=0, APMF.esl missing, param.form == 0,
+                                     //         param.pos non-zero -- and, with kTravel_ToPosition
+                                     //         (ABI v11): a non-zero param.form, a non-finite
+                                     //         point, or a runtime without XMarker support.
+                                     //         Nothing to clean up.
+                                     //       * AT ENGAGE (one Drain later, on the game thread):
+                                     //         param.form naming a record that is neither an
+                                     //         object reference nor a cell. RequestEx already
+                                     //         returned a LIVE HANDLE, the log says why the
+                                     //         claim does nothing, and the handle stays live
+                                     //         until you Release it. RELEASE IT.
+                                     //       See Docs/APMF_API-REFERENCE.md#kintent-travel-refusal-timing
+
+        kIntent_TargetPin     = 20,  // ch.20 PIN this actor's combat target (ABI v13, marth
+                                     //       2026-09-25). Mode: DENY the ENGINE'S OWN target
+                                     //       selection AT ITS SOURCE (APMF's seat on the combat
+                                     //       target selectors, vtable slot 6). A STANDING claim:
+                                     //       no TTL, ended only by Release.
+                                     //       Param: form = the TARGET actor's FormID (REQUIRED).
+                                     //       ival = TargetPinFlags (ABI v18; 0 = none).
+                                     //       fval / target / pos are not read.
+                                     //
+                                     //       Answers the engine target selectors with your target, only among
+                                     //       the group's own combat targets; pauses otherwise; APMF releases
+                                     //       it when the target is lost / dead / unloaded.
+                                     //       See Docs/APMF_API-REFERENCE.md#kintent-targetpin
+                                     //
+                                     //       OWN LINE OF SIGHT (ABI v18): param.ival carries
+                                     //       TargetPinFlags (it was not read before v18). With
+                                     //       kTargetPin_OwnLineOfSight the pin ALSO pauses while
+                                     //       Harbinger's own ray from the actor to the target is
+                                     //       not VISIBLE (see that flag). Without it, unchanged.
+                                     //
+                                     //       REFUSED SYNCHRONOUSLY (kInvalidHandle, logged): VR, a
+                                     //       runtime other than 1.6.1170 / 1.5.97, [TargetPin]
+                                     //       bTargetPin=0, a seat's address self-check failed,
+                                     //       before kDataLoaded, param.form == 0, param.form == the
+                                     //       actor itself, or the actor is the player (ch.20 pins
+                                     //       NPC combat targets only), or (ABI v18)
+                                     //       kTargetPin_OwnLineOfSight while the line-of-sight
+                                     //       service is not armed. REFUSED AT ENGAGE
+                                     //       (one Drain later; the handle is LIVE and inert, the log
+                                     //       says why -- RELEASE IT): param.form is not an Actor.
+                                     //       Repoint(handle, &param) moves the pin to a new target
+                                     //       in place; a Repoint naming a non-actor, 0 or the actor
+                                     //       itself leaves the claim live and inert, logged.
+
+        kIntent_CombatEntry   = 21,  // ch.21 PUT this actor INTO COMBAT against a named target
+                                     //       (ABI v14, marth 2026-09-25, ClickUp 86e3940zb).
+                                     //       Mode: ONE ENGINE CALL per engage (INVARIANTS #0 (g)).
+                                     //       Param: form = the TARGET actor's FormID (REQUIRED).
+                                     //       fval / ival / target / pos are not read.
+                                     //
+                                     //       WHAT IT DOES. On the game thread, one frame after
+                                     //       the claim is applied, Harbinger calls the engine's
+                                     //       own combat entry, Actor::StartCombat(target), ONCE.
+                                     //       Not in combat: the engine builds the actor's combat
+                                     //       controller and group with your target as the group's
+                                     //       first combat target (if the engine accepts it; if it
+                                     //       does not, no controller is kept). Already in combat:
+                                     //       the engine adds your target to the group's combat
+                                     //       targets and keeps its current target. Everything
+                                     //       after that is the engine's own AI.
+                                     //
+                                     //       IT DOES NOT CHOOSE WHOM THE ACTOR FIGHTS FIRST. The
+                                     //       engine's own target selector does, among its group's
+                                     //       targets. To make the actor fight YOUR target, also
+                                     //       claim kIntent_TargetPin (ch.20) with the same target:
+                                     //       entry puts the target in the group, the pin answers
+                                     //       the selector with it. Two intents, two handles (one
+                                     //       intent, one facet). INTEGRATION.md "enter combat +
+                                     //       pin" is the recipe.
+                                     //
+                                     //       ONE CALL PER DECLARATION, NEVER SUSTAINED. Harbinger
+                                     //       does not re-enter combat when the engine ends it and
+                                     //       does not keep the fight going. A Repoint of a live
+                                     //       claim (or a new winning claim) makes ONE more call for
+                                     //       its target.
+                                     //
+                                     //       RELEASE STOPS NOTHING. Releasing the claim ends
+                                     //       Harbinger's part and calls no StopCombat: the fight
+                                     //       is the engine's state now, and the engine ends it
+                                     //       the way it ends any fight. Call Actor::StopCombat
+                                     //       yourself if you want it over.
+                                     //
+                                     //       THE CLAIM ENDS, AND APMF RELEASES IT ITSELF (never
+                                     //       left live and inert; IsClaimLive(handle) turns false,
+                                     //       the log names the reason), when:
+                                     //         * the ENGINE REFUSED the entry (StartCombat returned
+                                     //           false: a restrained, unconscious or dead actor, a
+                                     //           dead target, the engine's own distance test, its
+                                     //           identity test against one engine-global actor,
+                                     //           or an engine flag) -- "engine refused entry: ...";
+                                     //         * the entry could not be attempted: the target is
+                                     //           not an Actor, or the actor is not loaded, has no
+                                     //           AI process or is dead;
+                                     //         * the FIGHT ENDED: the entry succeeded and the actor
+                                     //           now has no combat controller -- "combat ended";
+                                     //         * the target is dead, disabled, not loaded or no
+                                     //           longer resolves, or the actor itself dies.
+                                     //       After "combat ended" or a refusal, another claim on
+                                     //       the actor that takes over naming the SAME target ends
+                                     //       with the same reason (no re-entry) until the actor has
+                                     //       no combat-entry claim left.
+                                     //       To try again, send a NEW RequestEx. Your own Release,
+                                     //       an outranking claim, a save load, a new game or the
+                                     //       actor unloading also end it (never saved).
+                                     //
+                                     //       The world's reaction to the fight is YOURS (CLAUDE.md
+                                     //       principle 2): crime, bounty, faction and aggression
+                                     //       changes, allies and guards joining, combat music
+                                     //       happen as the engine does them, and Release does not
+                                     //       undo them.
+                                     //
+                                     //       REFUSED SYNCHRONOUSLY (kInvalidHandle, logged): VR, a
+                                     //       runtime other than 1.6.1170 / 1.5.97, [CombatEntry]
+                                     //       bCombatEntry=0, the StartCombat address self-check
+                                     //       failed, before kDataLoaded, param.form == 0,
+                                     //       param.form == the actor itself, or the actor is the
+                                     //       player. The TARGET may be the player. A target that
+                                     //       is not an Actor is found one frame later and ENDS the
+                                     //       claim (above).
+
+        kIntent_CombatReentryDeny = 22, // ch.22 KEEP this actor OUT OF COMBAT for a bounded window
+                                     //       (ABI v15, ClickUp 86e3ex5v9). Mode: DENY the ENGINE'S
+                                     //       OWN COMBAT ENTRY for this actor at its source
+                                     //       (INVARIANTS #0 (h)). A BOUNDED claim: it ends by itself.
+                                     //       Param: fval = the WINDOW in seconds (0 => 10 s; above
+                                     //       120 s it is clamped to 120, logged; negative or NaN is
+                                     //       refused). form / ival / target / pos are not read.
+                                     //
+                                     //       WHAT IT DOES. Every way the engine puts an actor into
+                                     //       combat (it sees an enemy, it is attacked, an ally is
+                                     //       fighting, a script or another mod calls StartCombat) goes
+                                     //       through one engine function, Actor::StartCombat. While
+                                     //       the claim holds and its window runs, APMF makes that
+                                     //       function refuse for this actor EVERY time, before it does
+                                     //       anything (no weapon draw, no equip, no alarm). The actor
+                                     //       keeps doing what its package says.
+                                     //
+                                     //       IT STOPS NOTHING. An actor that is already in combat is
+                                     //       not taken out of it (it only gains no new foes through
+                                     //       StartCombat). The recipe for a retreat is: claim this, and
+                                     //       on the first tick IsClaimLive(handle) reads true (the
+                                     //       claim is applied at the next drain; before that the handle
+                                     //       is PENDING, not ended) call Actor::StopCombat ONCE yourself
+                                     //       (INTEGRATION.md "retreat: StopCombat once + deny
+                                     //       re-entry"). From then on
+                                     //       the engine cannot pull the actor back in until the window
+                                     //       ends. Other actors may still attack it: their fight is
+                                     //       their facet. Nothing is undone when the claim ends:
+                                     //       nothing was written.
+                                     //
+                                     //       YOUR OWN kIntent_CombatEntry IS NOT DENIED. A ch.21 entry
+                                     //       for the actor (yours or another client's) is a declared
+                                     //       decision and passes. It does not end this claim: once
+                                     //       that fight ends, the window (if still running) refuses the
+                                     //       engine's re-entries again.
+                                     //
+                                     //       THE CLAIM ENDS, AND APMF RELEASES IT ITSELF (the log names
+                                     //       the reason, IsClaimLive(handle) turns false), when the
+                                     //       window elapses ("window elapsed") or the actor dies
+                                     //       ("owner dead"). The window runs from the claim's OWN
+                                     //       request (or last Repoint): a claim that takes over from a
+                                     //       released rival gets only what is left of it, and ends at
+                                     //       once if nothing is. Repoint(handle, &param) restarts the
+                                     //       window from that moment with the new fval. Your own
+                                     //       Release, an outranking claim, a save load, a new game or
+                                     //       the actor unloading also end it (never saved).
+                                     //
+                                     //       FIELD STATUS: the seat must be OBSERVED on the deck (the
+                                     //       log line "[ch.22] seat OBSERVED") before a client relies on
+                                     //       it (CLAUDE.md principle 5). "[ch.22] ... DENY MISSED" in
+                                     //       the log means the actor entered combat anyway: report it.
+                                     //
+                                     //       REFUSED SYNCHRONOUSLY (kInvalidHandle, logged): VR, a
+                                     //       runtime other than 1.6.1170 / 1.5.97, [CombatReentryDeny]
+                                     //       bCombatReentryDeny=0, a self-check refusal, before
+                                     //       kDataLoaded, a negative or NaN fval, or the actor is the
+                                     //       player.
+
+        kIntent_PursuitLeash = 23,   // ch.23 LEASH this actor's in-combat PURSUIT to an anchor actor
+                                     //       (ABI v16, ClickUp 86e3ex5ve). Mode: DENY, CONDITIONAL.
+                                     //       Param: target = the ANCHOR actor (REQUIRED; 0 or the
+                                     //       actor itself refused); fval = the RADIUS in game units
+                                     //       (REQUIRED, > 0). form / ival / pos are not read.
+                                     //
+                                     //       WHAT IT DOES. While the actor is farther than the radius
+                                     //       from the anchor, the combat behaviour-tree moves that
+                                     //       take it toward its goal are refused when that goal is
+                                     //       farther from the anchor than the actor is (the move
+                                     //       would take it farther). The goal is the combat TARGET
+                                     //       for the ten pursuit leaves (Advance, Chase,
+                                     //       FindAttackLocation, Flank, FlankDistant,
+                                     //       MaintainOptimalRange, PursueTarget, Reposition, Stalk,
+                                     //       Surround) and the combat group's SEARCH CENTER for the
+                                     //       four search leaves (Search, SearchCenter,
+                                     //       SearchLocation, SearchWander). A leaf is refused before
+                                     //       it starts, and one already running is ended the way the
+                                     //       engine ends a leaf whose path failed. Every other move,
+                                     //       every attack, spell and block runs natively; the actor is
+                                     //       never walked back.
+                                     //
+                                     //       ITS OWN FACET: arbitrated separately from ch.7
+                                     //       (kIntent_CombatAction). A ch.7 claim by another mod
+                                     //       neither replaces nor is replaced by a leash.
+                                     //
+                                     //       ENDS: Release, an outranking ch.23 claim, a save load, a
+                                     //       new game, or the actor unloading. A dead actor runs no
+                                     //       combat tree; a dead, unloaded or other-cell anchor holds
+                                     //       nothing back.
+                                     //
+                                     //       REFUSED SYNCHRONOUSLY (kInvalidHandle, logged): an APMF
+                                     //       older than v16 ("no channel serves intent 23"), VR, a
+                                     //       runtime other than 1.6.1170 / 1.5.97, [PursuitLeash]
+                                     //       bPursuitLeash=0, a self-check refusal, before
+                                     //       kDataLoaded, target 0 or the actor itself, a radius that
+                                     //       is not a positive number, or the actor is the player. An
+                                     //       anchor that is not a loaded Actor is found at Engage:
+                                     //       the claim stands and denies nothing (logged).
+                                     //
+                                     //       FIELD STATUS: built, CI-verified, NOT yet observed on a
+                                     //       deck (the "[ch.23] pursuit H" heartbeat counts the leaves).
+
+        kIntent_CombatApproach = 24, // ch.24 CLOSE to within R of an actor WHILE IN COMBAT -- the
+                                     //       in-combat MOVEMENT GOAL (ABI v19, batch A). Mode: DENY +
+                                     //       SUBSTITUTE of one UNWEIGHTED engine input (the combat
+                                     //       area), composed with the combat behaviour; never a
+                                     //       package, never a forced move.
+                                     //       Param: target = X, the reference to close on (REQUIRED;
+                                     //       an Actor or any loaded reference; the player is allowed;
+                                     //       0 or the actor itself refused); fval = R, game units
+                                     //       (REQUIRED, finite, > 0); ival = CombatApproachFlags.
+                                     //       form / pos are not read.
+                                     //
+                                     //       WHAT IT DOES. The engine's combat tree runs two parallel
+                                     //       halves, Movement and Action. The Movement half keeps the
+                                     //       actor inside its CURRENT COMBAT AREA: when the actor is
+                                     //       outside it, the movement selector picks the engine's own
+                                     //       Return To Combat Area branch (it paths back), and inside
+                                     //       it every movement leaf's destination is clamped to it.
+                                     //       While this claim is in force the actor's own standard
+                                     //       combat area is centred on X with radius R. So the actor
+                                     //       walks toward X in its combat gait, keeps fighting and
+                                     //       casting with both hands the whole way, and once within R
+                                     //       it keeps moving tactically inside R. The engine also reads
+                                     //       the area OUTSIDE movement: the attack and bash pick (an
+                                     //       attack whose end point is outside the area is rejected),
+                                     //       the target selector's score and the invisibility / bound
+                                     //       weapon cast decisions. Every one of those is answered
+                                     //       with the engine's OWN area, not the bound, so no other
+                                     //       action is dropped or changed by the claim. (Its
+                                     //       unreachable-target check and its weapon pickup belong to
+                                     //       the MOVEMENT half and follow the bound.)
+                                     //
+                                     //       THEY FORCE, THEY WIN. A package's HOLD POSITION area
+                                     //       outranks the standard area in the engine's own pick, and
+                                     //       still does: the claim then reads kApproachState_Yielded and
+                                     //       moves nothing. A fleeing actor, or one that is not high
+                                     //       process, has no standard area: kApproachState_Disabled.
+                                     //       A ch.23 PURSUIT LEASH on the same actor is respected:
+                                     //       when no point within R of X lies inside the leash, the
+                                     //       claim reads kApproachState_Leashed and moves nothing.
+                                     //
+                                     //       ENDS -- AND HARBINGER RELEASES THE CLAIM ITSELF (read why
+                                     //       with GetCombatApproachState): ARRIVAL (the engine's own
+                                     //       "inside the area" test, unless kApproach_Hold), the target
+                                     //       LOST (gone, dead, disabled, unloaded, another cell),
+                                     //       COMBAT ENDED after the area was applied, the engine
+                                     //       STOPPED updating the area (its own path back failed, it
+                                     //       deactivated the area; logged), the actor gone. Also a
+                                     //       client Release, an outranking ch.24 claim, a save load or
+                                     //       a new game. A claim made OUT of combat waits
+                                     //       (kApproachState_Waiting) and applies when combat starts.
+                                     //
+                                     //       REFUSED SYNCHRONOUSLY (kInvalidHandle, logged): an APMF
+                                     //       older than v19 ("no channel serves intent 24"), VR, a
+                                     //       runtime other than 1.6.1170 / 1.5.97 / 1.7.104,
+                                     //       [CombatApproach] bCombatApproach=0, a self-check refusal,
+                                     //       before kDataLoaded, target 0 or the actor itself, a radius
+                                     //       that is not a positive finite number, or the actor is the
+                                     //       player. A target that is not a loaded reference is found
+                                     //       at Engage: the claim is ended (kApproachState_TargetLost).
+                                     //
+                                     //       FIELD STATUS: built, CI-verified, NOT yet observed on a
+                                     //       deck (the "[ch.24]" heartbeat counts the seats).
+        kIntent_CastGuard     = 25,  // ch.25 GUARD this actor's own casts (ABI v21). Mode: DENY at the cast
+                                     //       gates (0x0A CheckCast on the two HAND casters, 0x06 CheckStartCast).
+                                     //       Param: ival = CastGuardFlags (>= 1 known bit, no unknown bit); fval =
+                                     //       TTL in SECONDS (0 => kCastDefaultTtlMs, clamped to kCastMaxTtlMs;
+                                     //       Repoint renews it like a cast claim). form/target/pos not read. The
+                                     //       winning live claim's bits apply; a deny stands only while its client
+                                     //       outranks "Engine" on the Cast facet (APMF_Sources.ini). REFUSED
+                                     //       (kInvalidHandle, logged): APMF < v21, the player, CheckCast gate not
+                                     //       installed, a bad ival / fval, kCastGuard_LineOfFire while unarmed.
+        kIntent_EquipPreference = 26, // ch.26 PREFER items for this actor's hands IN COMBAT (ABI v22, weighting
+                                     //       phase 1). Mode: COMPOSE (the engine's own CalculateScore 0x0C answer
+                                     //       is LIFTED, never replaced) + an opt-in DENY (kEquipPref_Force).
+                                     //       Param: ival = EquipPrefFlags. form/target/fval/pos are not read. A
+                                     //       STANDING claim (no TTL), ended by Release. The claim alone changes
+                                     //       nothing: the client then DECLARES the preferred items with
+                                     //       SetEquipPreference (APMF_API_v22). See "ABI v22: EQUIP PREFERENCE"
+                                     //       at the end of this header for the whole contract. REFUSED
+                                     //       (kInvalidHandle, logged): APMF < v22, the player, actor 0,
+                                     //       [AiCastSeats] EnableScoreSteer=0, or no score seat installed.
+        kIntent_CombatSubstrate = 27, // COMBAT SUBSTRATE (ABI v23, INVARIANTS #0 (j)). Mode: a bounded combat
+                                     //       SUBSTRATE + Harbinger's own deny set. Param: fval = TTL in SECONDS (0 =>
+                                     //       the INI default 6 s, clamped to 15 s). form/ival/target/pos not read.
+                                     //       Harbinger puts the OUT-OF-COMBAT actor into combat against its own
+                                     //       anchor actor so the engine's animated cast road exists, lets only the
+                                     //       three cast leaves run (and only while a DRIVING kIntent_Cast claim
+                                     //       stands), floors both hands at the lowest basis, keeps the actor's own
+                                     //       package moving it, and ends it on the cast claim's first fire (fire-
+                                     //       and-forget), the claim's end, Release, the TTL or death / unload.
+                                     //       REAL COMBAT (a foe in its group, a hit from a non-party actor, the
+                                     //       party in combat) DROPS it with no StopCombat: the fight and the cast
+                                     //       claim go on, and Harbinger releases this claim (IsClaimLive false).
+                                     //       File it beside your kIntent_Cast claim. REFUSED (kInvalidHandle,
+                                     //       logged): APMF < v23, [CombatSubstrate] bCombatSubstrate=0 (set off in APMF.ini),
+                                     //       an unsupported runtime, the player, a negative / NaN fval. A
+                                     //       substrate that cannot open (in combat, unloaded, ...) ends its claim.
+                                     //       ABI v26: APMF_API_v26::GetSubstrateState (substrate-only combat).
+                                     //       ABI v27: APMF_API_v27::IsSubstrateAvailable (installed here?).
+                                     //       See Docs/FACETS.md "Combat substrate".
+        kIntent_Place = 28,          // PLACE this actor beside a reference or at a point in an interior cell (ABI v28).
+                                     //       Mode: ONE ENGINE MOVE (INVARIANTS #0 (k)), never a claim: ONE move
+                                     //       (TESObjectREFR::MoveTo_Impl, the body Papyrus ObjectReference.MoveTo
+                                     //       runs) on the game thread. It holds no facet and switches nothing on.
+                                     //       Param: form = the destination, a REFERENCE (the actor lands at its
+                                     //       position + pos as an offset) or an INTERIOR CELL (the actor lands at
+                                     //       pos in it); ival = PlaceFlags; fval = the yaw in radians, read only
+                                     //       with kPlace_SetYaw. target not read. Basis not read. RequestEx only.
+                                     //       The handle is a label: IsClaimLive is false, Release/Repoint do
+                                     //       nothing. The outcome is GetPlaceState (APMF_API_v28). REFUSED
+                                     //       (kInvalidHandle, logged): APMF < v28, not installed, the player,
+                                     //       actor 0, form 0, a non-finite pos / yaw, an unknown flag bit.
+                                     //       See "ABI v28: PLACE" at the end of this header, Docs/FACETS.md "Place".
+    };
+
+    // ── Cast guard flags (kIntent_CastGuard's param.ival, ABI v21). APPEND-ONLY. ──────
+    enum CastGuardFlags : std::uint32_t {
+        kCastGuard_LineOfFire   = 1u << 0,  // HOLD an OFFENSIVE cast (a hostile effect, not Self delivery) while a
+                                            //   FRIENDLY (not hostile to the caster; for a teammate caster also the
+                                            //   player and teammates) is in the open within 80u of the line to the aim,
+                                            //   or within the spell's area (EFIT feet x 64/3) + 64u of the aim (aim =
+                                            //   its driving cast claim's target, else its combat target). Measured each
+                                            //   frame. 0x06: NO unless a <= 250 ms measurement says clear; 0x0A (start,
+                                            //   release, channel ticks): refused when one says blocked.
+        kCastGuard_ChannelRight = 1u << 1,  // REFUSE the AI's own CONCENTRATION cast on the right / left HAND caster
+        kCastGuard_ChannelLeft  = 1u << 2,  //   (0x0A: start and every channel tick) unless a live kIntent_Cast claim
+                                            //   on that hand names that spell. The instant caster is never touched.
+        kCastGuard_All          = 0x7u,
+    };
+
+    // ── Combat approach flags (kIntent_CombatApproach's param.ival, ABI v19) ────
+    // APPEND-ONLY once shipped: never renumber an existing bit.
+    enum CombatApproachFlags : std::uint32_t {
+        kApproach_None = 0,
+        kApproach_Hold = 1u << 0,   // keep the bound after ARRIVAL: the claim does not end inside R;
+                                    //   the actor stays within R of X (moving tactically inside it)
+                                    //   until the client releases it or another end condition fires.
+                                    //   Without it the claim ENDS on arrival (kApproachState_Arrived).
+    };
+
+    // ── Travel flags (kIntent_Travel's param.ival, ABI v10) ─────────────────────
+    // Read at RequestEx/Repoint time from param.ival. APPEND-ONLY once shipped:
+    // never renumber an existing bit; OR in a new bit at the next free position.
+    // (These bit values are still fresh: ABI v10 has never been released and has
+    // never been mirrored into a client -- MFO's byte-shared copy is at v9 and does
+    // not contain this intent at all -- so the numbering below is the first and only
+    // one there has ever been.)
+    enum TravelFlags : std::uint32_t {
+        kTravel_None = 0,
+
+        kTravel_ReleaseOnTargetDead = 1u << 0,
+                                        // NAMES THE DEFAULT; it does not switch it on. APMF
+                                        //   ends the leg when a destination that was ALIVE when
+                                        //   it was targeted DIES during travel, whether or not
+                                        //   this bit is set. A destination that was ALREADY DEAD
+                                        //   when targeted (a corpse) is a valid place to walk to
+                                        //   and never ends the leg by death (marth 2026-09-23:
+                                        //   "If the target is dead when targeted, it's fine. But
+                                        //   if it dies during travel, drop."). Re-pointing
+                                        //   re-samples. A disabled, deleted or unresolvable
+                                        //   destination ends the leg regardless. Setting the bit
+                                        //   is free and documents intent.
+
+        kTravel_ToPosition = 1u << 1,   // ABI v11. The destination is the WORLD POINT param.pos
+                                        //   (in the actor's worldspace; indoors, its cell), not a form:
+                                        //   param.form MUST be 0 (a non-zero form with this bit is
+                                        //   REFUSED as ambiguous). Gate on abiVersion >= 11: an
+                                        //   older APMF refuses a zero form, so the request fails
+                                        //   loudly rather than walking somewhere else.
+                                        //   APMF places a non-persistent XMarker (Skyrim.esm 0x3B)
+                                        //   at the point one hop after the claim publishes, and the
+                                        //   leg is an ordinary reference leg to it: same arrival
+                                        //   radius, same combat cancel, same 2-minute stuck end. The
+                                        //   death rule never applies (a marker cannot die).
+                                        //   MARKER LIFETIME = THE LEG. It is deleted (by tracked
+                                        //   handle, re-checked FormID and base) when the leg ends
+                                        //   for ANY reason: arrival, combat, Release, a Repoint to a
+                                        //   different point or to a form, the stuck end, the actor
+                                        //   unloading, dying or losing its 3D. A Repoint to a new
+                                        //   point places the new marker, re-points the package,
+                                        //   then deletes the old one. At most one marker per travel
+                                        //   package slot (8). APMF does NOT pick the point (use
+                                        //   FindEmptySpace if you want help) and never adjusts it.
+
+        // ── GAIT (ABI v12) ── bits 2-4. Gate on abiVersion >= 12: an older APMF stores the
+        //   bits and walks at its authored speed (Run), with no refusal and no log line.
+        kTravel_SpeedSet = 1u << 2,     // ABI v12. Use the speed in bits 3-4 for this leg. Without
+                                        //   this bit the leg runs at the package record's AUTHORED
+                                        //   speed (APMF.esl ships Run) and bits 3-4 are ignored.
+        kTravel_SpeedMask = 3u << 3,    // ABI v12. The speed field. The four values are the engine's
+                                        //   own PACKAGE_DATA::PreferredSpeed enum, written into the
+                                        //   leg's package record (PKDT byte 6) together with the
+                                        //   record's "Preferred Speed" flag (0x2000), which the engine
+                                        //   requires before it honours the byte at all.
+        kTravel_SpeedWalk     = 0u << 3,   // PreferredSpeed 0 = Walk
+        kTravel_SpeedJog      = 1u << 3,   // PreferredSpeed 1 = Jog
+        kTravel_SpeedRun      = 2u << 3,   // PreferredSpeed 2 = Run
+        kTravel_SpeedFastWalk = 3u << 3,   // PreferredSpeed 3 = FastWalk (the engine's fourth value)
+                                        //   WHEN IT TAKES EFFECT: the engine copies the record's speed
+                                        //   into the actor's running-package state when the package
+                                        //   STARTS on the actor (1.6.1170 0x6CE2C0 / 1.5.97 0x63BD40)
+                                        //   and the movement code reads that copy. APMF writes the
+                                        //   record before it offers the package, so a fresh leg walks
+                                        //   at the declared gait. A Repoint that CHANGES the gait of a
+                                        //   leg that is already walking rewrites the record, but the
+                                        //   running package keeps the speed it started with until the
+                                        //   package next starts. APMF logs that case. Release and
+                                        //   re-request to change gait mid-walk.
+
+        kTravel_CrossCells = 1u << 5,   // ABI v30. A REFERENCE destination (an actor or any object ref, not a
+                                        //   cell, not kTravel_ToPosition) that may be in ANOTHER cell. The
+                                        //   package still names the ref's handle, so the engine paths through
+                                        //   load doors and follows a moving actor. ARRIVAL = in the
+                                        //   destination's current parent cell (interior) or the same worldspace
+                                        //   (exterior) AND within the radius; a destination unloaded outdoors
+                                        //   (only its worldspace's persistent cell known) is waited for. On
+                                        //   arrival the leg HOLDS like a cell leg (kLeg_Arrived, the offer
+                                        //   stays until you Repoint or Release). Without it: unchanged.
+                                        //   Gate on abiVersion >= 30: an older APMF ignores the bit (distance
+                                        //   arrival, no hold).
+                                        //   See Docs/APMF_API-REFERENCE.md#abi-v30-travel-cross-cells
+    };
+
+    // ── Travel LEG STATE (ABI v12, APMF_API_v12::GetTravelLegState) ──────────────
+    // What ch.19 is doing with an actor's travel leg right now, or why it stopped.
+    // APPEND-ONLY: never renumber a value.
+    //
+    // A LEG ENDS BUT THE CLAIM STANDS. APMF never releases a client's kIntent_Travel
+    // claim. When a leg ends (arrival at a plain reference, combat, destination gone, ...)
+    // APMF drops only its own internal package offer and the claim stays live (IsClaimLive
+    // stays true) and does nothing until the client Repoints or Releases it. Since
+    // 2026-10-26 a BLOCKED or STUCK end KEEPS the offer while the claim stands (the actor
+    // is not handed back to his own package); a Repoint starts a new leg, a Release hands
+    // him back. Read this state to learn WHY the actor stopped walking, instead of
+    // mistaking an ended leg for a package theft.
+    enum TravelLegState : std::uint32_t {
+        kLeg_None            = 0,   // APMF holds no ch.19 state for this actor (never claimed since the
+                                    //   last load, or ch.19 is not installed)
+        kLeg_Pending         = 1,   // the claim was accepted or re-pointed; the leg starts on the next frame
+        kLeg_Walking         = 2,   // the package is offered and the actor is travelling
+        kLeg_Arrived         = 3,   // inside the arrival radius (or, for a cell, inside the cell)
+        kLeg_Blocked         = 4,   // the engine held the actor in its MOVEMENT BLOCKED package (package
+                                    //   type 36) for 3 s of running game time (one missed poll tolerated).
+                                    //   stallX/Y/Z says where; blocker/blockerKind say whether an ACTOR
+                                    //   stood in front of it (it will likely move: take another item and
+                                    //   come back later) or nothing did (a STATIC block such as a closed
+                                    //   gate: the route stays closed until the world changes).
+        kLeg_CombatCancelled = 5,   // the actor entered combat
+        kLeg_DestGone        = 6,   // the destination was deleted, disabled, died during travel, or (a
+                                    //   cell) no longer resolves
+        kLeg_StuckTimeout    = 7,   // the 2-minute safety net elapsed with none of the above, OR (since
+                                    //   2026-10-26) the engine ended a reference leg's walk outside the
+                                    //   radius and a restart was spent or futile (about 1 s after it)
+        kLeg_ActorGone       = 8,   // the actor unloaded, died, or lost its 3D
+        kLeg_Failed          = 9,   // the leg could not start or be re-pointed (a destination that is not
+                                    //   a reference or a cell, a zero form or a bad point on a Repoint, all
+                                    //   8 package slots in use, a declined Location write, a marker that
+                                    //   could not be placed). The log says which. destForm / destX..Z name
+                                    //   the REFUSED destination. A refused Repoint ENDS the previous leg:
+                                    //   the actor does not keep walking to a destination the claim no
+                                    //   longer declares.
+        kLeg_Released        = 10,  // the ch.19 claim was released
+    };
+
+    // What stood in front of the actor when a leg ended kLeg_Blocked (APMF_TravelLegInfo::blockerKind).
+    enum TravelBlocker : std::uint32_t {
+        kBlocker_None     = 0,   // not a BLOCKED end, or no actor in front: a STATIC block (a closed gate,
+                                 //   a wall, clutter). Treat the route as closed until the world changes.
+        kBlocker_Player   = 1,   // the player stood in front of the actor
+        kBlocker_Teammate = 2,   // a player teammate (a follower) stood in front of the actor
+        kBlocker_Actor    = 3,   // another live actor (any NPC or creature) stood in front of the actor
+    };
+
+    // GetTravelLegState output. EXACT LAYOUT (byte-shared): 72 bytes, every field 4 bytes.
+    // The CALLER sets `size` = sizeof(APMF_TravelLegInfo) as compiled against its header.
+    // THE SIZE RULE (frozen): APMF fills the v12 fields when `size` >= kTravelLegInfoV12Size
+    // (72, a constant that NEVER changes, unlike sizeof as fields are appended) and writes
+    // nothing into a smaller struct. A field a later ABI appends is written ONLY when it lies
+    // entirely inside the caller's `size`, so a client built against v12 keeps getting its
+    // 72 bytes from every later APMF, and APMF never writes past `size`.
+    struct APMF_TravelLegInfo {
+        std::uint32_t size;        // +0   the CALLER sets = sizeof(APMF_TravelLegInfo)
+        std::uint32_t state;       // +4   a TravelLegState (the same value the call returns)
+        RE::FormID    actor;       // +8   the actor asked about
+        RE::FormID    destForm;    // +12  the destination FormID this state is about; 0 for a point leg
+                                   //        (kTravel_ToPosition) or when state is kLeg_None. Compare it
+                                   //        with what you declared: after a Repoint the state refers to
+                                   //        the new destination only once it reads Pending or later for it.
+        float         destX;       // +16  a point leg's declared point; 0 otherwise
+        float         destY;       // +20
+        float         destZ;       // +24
+        std::uint32_t msInState;   // +28  milliseconds since this state began (saturates at 0xFFFFFFFF)
+        std::uint32_t seq;         // +32  a stamp from ONE counter APMF never resets while the game runs
+                                   //        (not per actor, not per load): it changes on EVERY state change of
+                                   //        this actor's leg and never repeats, so a client can tell a new end
+                                   //        from one it already handled, across save loads too. Compare for
+                                   //        inequality, not for +1.
+        float         stallX;      // +36  kLeg_Blocked: the actor's position when the leg ended; 0 otherwise
+        float         stallY;      // +40
+        float         stallZ;      // +44
+        std::uint32_t blockedMs;   // +48  kLeg_Blocked: how long Movement Blocked held before the end
+        std::uint32_t speed;       // +52  the gait written into the leg's package record: 0..3 =
+                                   //        PreferredSpeed (Walk, Jog, Run, FastWalk); 0xFFFFFFFF = none
+                                   //        written (no kTravel_SpeedSet on the claim, or a build the gait
+                                   //        path is not verified on, which the log names), so the record's
+                                   //        authored speed applies
+        std::uint32_t reserved;    // +56  0
+        std::uint32_t ownerHandle; // +60  the kIntent_Travel claim handle whose leg this is (the WINNING claim
+                                   //        when the leg was composed). Compare it with YOUR handle: a
+                                   //        different value is another client's leg, or an older claim of
+                                   //        yours. 0 while a fresh claim is still Pending, and on kLeg_None.
+                                   //        During a Pending re-point, and on a kLeg_Failed recorded for a
+                                   //        refused re-point that arrived with an OWNER CHANGE, it still
+                                   //        names the previous owner (the new claim is not yet published).
+        RE::FormID    blocker;     // +64  kLeg_Blocked: the actor found in front of the stalled actor (see
+                                   //        blockerKind); 0 for a static block or any other state
+        std::uint32_t blockerKind; // +68  a TravelBlocker; kBlocker_None unless state is kLeg_Blocked
+    };
+    // The v12 prefix size. FROZEN: GetTravelLegState tests the caller's `size` against THIS,
+    // never against sizeof(APMF_TravelLegInfo), which grows when a later ABI appends a field.
+    inline constexpr std::uint32_t kTravelLegInfoV12Size = 72;
+    static_assert(sizeof(APMF_TravelLegInfo) == 72,  "APMF_TravelLegInfo is 72 bytes, byte-shared with clients");
+    static_assert(sizeof(APMF_TravelLegInfo) >= kTravelLegInfoV12Size, "the v12 prefix is never shrunk");
+    static_assert(alignof(APMF_TravelLegInfo) == 4,  "APMF_TravelLegInfo aligns to 4");
+    static_assert(offsetof(APMF_TravelLegInfo, state)     == 4,  "state at +4");
+    static_assert(offsetof(APMF_TravelLegInfo, destForm)  == 12, "destForm at +12");
+    static_assert(offsetof(APMF_TravelLegInfo, msInState) == 28, "msInState at +28");
+    static_assert(offsetof(APMF_TravelLegInfo, seq)       == 32, "seq at +32");
+    static_assert(offsetof(APMF_TravelLegInfo, stallX)    == 36, "stallX at +36");
+    static_assert(offsetof(APMF_TravelLegInfo, blockedMs) == 48, "blockedMs at +48");
+    static_assert(offsetof(APMF_TravelLegInfo, speed)     == 52, "speed at +52");
+    static_assert(offsetof(APMF_TravelLegInfo, reserved)  == 56, "reserved at +56");
+    static_assert(offsetof(APMF_TravelLegInfo, ownerHandle) == 60, "ownerHandle at +60");
+    static_assert(offsetof(APMF_TravelLegInfo, blocker)     == 64, "blocker at +64");
+    static_assert(offsetof(APMF_TravelLegInfo, blockerKind) == 68, "blockerKind at +68");
+
+    // ── Equip-authority flags (kIntent_EquipAuthority's param.ival, ABI v7) ──
+    // Read at RequestEx/Repoint time from param.ival. APPEND-ONLY: never renumber
+    // an existing bit; OR in a new bit at the next free position.
+    enum EquipAuthFlags : std::uint32_t {
+        kEquipAuth_None        = 0,
+        kEquipAuth_DenyUnequip = 1u << 0,   // RESERVED. Not implemented: the unequip twin
+                                            //   (UnequipObject -> its own worker) is NOT seated
+                                            //   in this ABI. A claim carrying this bit is
+                                            //   ACCEPTED with the bit REFUSED (logged, ignored),
+                                            //   so a client built against a later APMF that does
+                                            //   honour it degrades to "unequips pass", never to
+                                            //   a refused claim.
+        kEquipAuth_DenyScript  = 1u << 1,   // Also refuse Papyrus (EquipItem/EquipItemEx) and
+                                            //   console equips of off-set items. Default OFF:
+                                            //   scripts are a quest/mod author's deliberate act
+                                            //   and pass through unless the client says otherwise.
+        kEquipAuth_ObserveOnly = 1u << 2,   // Log every verdict as `would-deny`, deny nothing.
+                                            //   The client-side twin of APMF.ini's
+                                            //   [EquipAuthority] bEquipObserveOnly (either one
+                                            //   set = observe). The first field build runs in
+                                            //   observe mode until the probe criteria in
+                                            //   Docs/INTEGRATION.md pass.
+        kEquipAuth_DenyPlayerMenu = 1u << 3, // ABI v8. Also refuse the PLAYER's own equips on
+                                            //   the actor -- the trade/gift/follower inventory
+                                            //   menu (`path=PlayerMenu`). Default OFF (player
+                                            //   agency, marth 2026-09-15): the player dressing
+                                            //   a follower by hand is a deliberate act and
+                                            //   PASSES unless the client sets this bit. The
+                                            //   log line reads `verdict=allow (player agency)`.
+                                            //   The allow is at the seat only: the next enforce
+                                            //   pass re-equips any declared item the player's
+                                            //   equip displaced. A client honouring player agency
+                                            //   must observe the change (that log line, or its own
+                                            //   inventory read) and fold the player's choice into
+                                            //   its next declaration.
+                                            //   A v7 APMF ignores the bit (unknown bits are
+                                            //   not refused), so a v8 client degrades to the
+                                            //   v7 behaviour (PlayerMenu denied) there.
+    };
+
+    // ABI v7: the bound on SetEquipSet's declared worn set. A full worn set is
+    // two hands (or a two-hander), body/head/hands/feet, shield, amulet, ring,
+    // circlet, plus a handful of modded slots (cloak, backpack, quiver) -- low
+    // teens at the extreme. 32 is comfortably above that; an overflow degrades to
+    // "the excess items are treated as off-set" (denied when the engine equips
+    // them, never equipped by APMF; never a crash or an unbounded write).
+    inline constexpr std::uint32_t kMaxEquipSet = 32;
+
+    // ── ABI v8: a per-item HAND for SetEquipSetEx ──
+    // The v7 SetEquipSet carries bare FormIDs and APMF equips them slot-less, so
+    // the engine picks the hand: a slot-less one-hander always lands in the RIGHT
+    // hand and displaces whatever was there (MFO measured it, 2026-09-15). That
+    // makes two hand-held items undeclarable -- a dagger meant for the off-hand
+    // evicts the sword. SetEquipSetEx carries one APMF_EquipEntry per item, with
+    // the hand the client wants it in. APPEND-ONLY: never renumber a value.
+    enum EquipSlot : std::uint8_t {
+        kEquipSlot_Default = 0,   // the engine picks (v7 behaviour; the only choice for a
+                                  //   two-hander, a bow, ammo, or body armor)
+        kEquipSlot_Right   = 1,   // the RIGHT hand (Skyrim.esm EQUP 0x00013F42 `RightHand`)
+        kEquipSlot_Left    = 2,   // the LEFT hand  (Skyrim.esm EQUP 0x00013F43 `LeftHand`)
+                                  //   -- a one-hand weapon, a shield, a torch
+    };
+
+    // One declared item. EXACT LAYOUT (byte-shared with the client, pinned below):
+    //   +0  form      RE::FormID (u32)  the item's BASE FormID
+    //   +4  slot      u8                an EquipSlot value; anything else is treated
+    //                                   as kEquipSlot_Default and logged once
+    //   +5  reserved  u8[3]             MUST be 0, except as ABI v25 defines them below
+    //                                   (an INSTANCE: kEquipEntry_HasUid + a uid). An
+    //                                   APMF older than v25 ignores them.
+    //   size 8, alignment 4. Trivially copyable; APMF copies the array synchronously
+    //   inside SetEquipSetEx and never retains the client's pointer.
+    struct APMF_EquipEntry {
+        RE::FormID   form;
+        std::uint8_t slot;
+        std::uint8_t reserved[3];
+    };
+    static_assert(sizeof(APMF_EquipEntry) == 8,  "APMF_EquipEntry is 8 bytes, byte-shared with clients");
+    static_assert(alignof(APMF_EquipEntry) == 4, "APMF_EquipEntry aligns to 4");
+    static_assert(offsetof(APMF_EquipEntry, form)     == 0, "form at +0");
+    static_assert(offsetof(APMF_EquipEntry, slot)     == 4, "slot at +4");
+    static_assert(offsetof(APMF_EquipEntry, reserved) == 5, "reserved at +5");
+
+    // ── ABI v25: an INSTANCE per entry (SetEquipSetEx) ── layout UNCHANGED (8 bytes); the
+    // instance rides the reserved bytes: reserved[0] = flags (kEquipEntry_HasUid, bits 1..7
+    // RESERVED, 0), reserved[1..2] = the uid, little-endian (0 without the flag). The uid is the
+    // item instance's ExtraUniqueID uniqueID (the identity MEO uses). Use the helpers below.
+    // With a uid the entry admits ONLY that instance: an engine equip naming another copy, a copy
+    // with no uid, or no instance at all (a null extra list: the combat AI, an outfit refresh) is
+    // off-set, unless another entry declares the same form with no uid. Harbinger's equip pass
+    // equips exactly that copy; one the actor does not carry is skipped and logged. No flag ==
+    // v8 (base-form match). A client must see abiVersion >= 25 before it sets the flag: an older
+    // APMF ignores the bytes WITHOUT a word (any copy satisfies the entry). Malformed bytes are
+    // logged once per handle and read as no uid. Reference: Docs/APMF_API-REFERENCE.md#abi-v25-equip-instance
+    // A uid on a HAND entry (weapon, shield, torch) takes that item out of the combat AI's weapon
+    // switching: CheckShouldEquip refuses it unless the hand already holds it, so only Harbinger's
+    // equip pass (per declaration) or a re-declaration puts it on. Set one there only if intended.
+    inline constexpr std::uint8_t kEquipEntry_HasUid = 1u << 0;   // reserved[0] bit 0 (ABI v25)
+    inline void SetEquipEntryUid(APMF_EquipEntry& entry, std::uint16_t uid) noexcept {   // uid 0 clears it
+        entry.reserved[0] = uid != 0 ? kEquipEntry_HasUid : std::uint8_t{ 0 };
+        entry.reserved[1] = static_cast<std::uint8_t>(uid & 0xFFu);
+        entry.reserved[2] = static_cast<std::uint8_t>((uid >> 8) & 0xFFu);
+    }
+    inline std::uint16_t EquipEntryUid(const APMF_EquipEntry& entry) noexcept {   // 0 = names no instance
+        if ((entry.reserved[0] & kEquipEntry_HasUid) == 0) return 0;
+        return static_cast<std::uint16_t>(entry.reserved[1] | (static_cast<std::uint16_t>(entry.reserved[2]) << 8));
+    }
+
+    // ── ABI v9: the equip CATEGORIES a claim OWNS or DENIES (SetEquipScope) ──
+    // v7/v8 took the facet WHOLE: a declaration refused every off-set engine equip
+    // of a governed type on the actor, so a client that only cared about the hands
+    // still had to declare the body armor, the shield, the arrows and the torch --
+    // or watch the engine's outfit refresh get refused for them (the first v8 deck
+    // run: 117 CombatNode/OutfitApply would-denies, all against hand-only intent).
+    // v9 SCOPES the authority. Each governed item COMPETES for one or more of these
+    // categories (the map is ONE function, apmf::equipsink::Categorize, used by the
+    // seat and by the enforce pass alike):
+    //   ARMO, no shield bit (or no bits) -> Armor
+    //   ARMO with the shield biped bit   -> Shield | Left
+    //   ARMO with the shield bit AND any other biped bit (a modded "shield on
+    //     back" piece)                   -> Shield | Left | Armor  (both kinds of
+    //                                     bits -> both categories, so an Armor-only
+    //                                     scope still holds the body slot against it)
+    //   WEAP two-handed (2H sword, 2H axe, bow, crossbow)  -> Right | Left
+    //   WEAP one-handed (incl. staff), equip slot LeftHand  -> Left
+    //   WEAP one-handed (incl. staff), equip slot RightHand -> Right
+    //   WEAP one-handed, any other/no slot (EitherHand)     -> Right | Left  (CONSERVATIVE:
+    //                                     the hand is not known yet, so both are competed)
+    //   AMMO                           -> Ammo
+    //   LIGH (torch)                   -> Light | Left
+    // APPEND-ONLY: never renumber a bit; a later ABI adds bits above bit 5 and
+    // widens kEquipCat_All in ITS revision only. A v9 APMF masks unknown bits
+    // off (logged once per handle), never refuses the call.
+    enum EquipCategory : std::uint32_t {
+        kEquipCat_None   = 0,         // a VALUE, not a bit: "no category" (an empty mask)
+        kEquipCat_Armor  = 1u << 0,   // every ARMO without the shield bit (body, head, hands, feet, jewelry, cloak ...)
+        kEquipCat_Shield = 1u << 1,   // an ARMO carrying BipedObjectSlot::kShield (competes for Left too)
+        kEquipCat_Right  = 1u << 2,   // the right hand
+        kEquipCat_Left   = 1u << 3,   // the left hand
+        kEquipCat_Ammo   = 1u << 4,   // AMMO (arrows, bolts)
+        kEquipCat_Light  = 1u << 5,   // LIGH (a torch; competes for Left too)
+        kEquipCat_All    = 0x3Fu,     // every category this ABI defines
+    };
+
+    // The SCOPE of an equip-authority claim (ABI v9). EXACT LAYOUT (byte-shared
+    // with the client, pinned below):
+    //   +0  owned     u32  EquipCategory mask: the categories the client's declared
+    //                      set is AUTHORITATIVE for. An engine equip competing for
+    //                      any owned category is held to the set (in-set -> allow,
+    //                      off-set -> deny); APMF's enforce pass equips a declared
+    //                      item only when EVERY category it competes for is owned.
+    //   +4  denied    u32  EquipCategory mask: the categories the actor must not
+    //                      equip into AT ALL. An engine equip competing for any
+    //                      denied category is refused even if it is in the set,
+    //                      and the enforce pass never equips into it.
+    //   +8  reserved  u32[2]  MUST be 0 (a later ABI may define them; a v9 APMF
+    //                      ignores them).
+    //   size 16, alignment 4. Trivially copyable; APMF copies it synchronously
+    //   inside SetEquipScope and never retains the client's pointer.
+    // The default scope of every claim is {owned = kEquipCat_All, denied = 0},
+    // which is v8's behaviour verbatim. An equip competing for NO owned and NO
+    // denied category passes the seat untouched (logged, `owned=0`), and the
+    // enforce pass skips a declared item in such a category (logged once per
+    // handle and set). The script/console and player-menu exemptions sit ABOVE
+    // both masks: an exempt path passes whatever the scope says.
+    struct APMF_EquipScope {
+        std::uint32_t owned;
+        std::uint32_t denied;
+        std::uint32_t reserved[2];
+    };
+    static_assert(sizeof(APMF_EquipScope) == 16, "APMF_EquipScope is 16 bytes, byte-shared with clients");
+    static_assert(alignof(APMF_EquipScope) == 4, "APMF_EquipScope aligns to 4");
+    static_assert(offsetof(APMF_EquipScope, owned)    == 0, "owned at +0");
+    static_assert(offsetof(APMF_EquipScope, denied)   == 4, "denied at +4");
+    static_assert(offsetof(APMF_EquipScope, reserved) == 8, "reserved at +8");
+
+    // ── Combat-action CATEGORY bitmask (kIntent_CombatAction's param.ival) ──────
+    // Which combat behavior-tree leaf CATEGORY a kIntent_CombatAction claim
+    // denies for its actor (ch.7, Docs/CHANNEL-MAP.md). A claim's param.ival is
+    // the OR of every category it wants denied; a leaf is denied only when its
+    // OWN classified category bit is set in the winning claim's mask -- an
+    // all-zero mask (or no claim at all) denies nothing, never a blanket lock.
+    // APPEND-ONLY: never renumber an existing bit; OR in a new bit at the next
+    // free position for a future category (defense/movement/utility are
+    // deliberately NOT assigned a bit yet -- Docs/ALLOWANCE-TEMPLATE.md §3's T1
+    // row lists them as never-denied by design until a real client need names
+    // one. The in-combat pursuit LEASH is not a category here: it is its own
+    // intent, kIntent_PursuitLeash (ch.23, ABI v16), on the same leaf seats).
+    enum CombatActionCategory : std::uint32_t {
+        kCombatActionCat_None    = 0,
+        kCombatActionCat_Offense = 1u << 0,   // Attack/AttackLow/Bash/RangedAttack/SpecialAttack/
+                                               // GroundAttack/FlyingAttack/CastImmediateSpell/
+                                               // CastConcentrationSpell/CastShout/PrepareDualCast leaves
+        kCombatActionCat_Cast    = 1u << 1,   // CastImmediateSpell, CastConcentrationSpell,
+                                               // PrepareDualCast, CastShout leaves (a leaf may carry
+                                               // several bits: the four cast leaves carry BOTH Offense
+                                               // and Cast). A kIntent_Cast claim denies ONLY these,
+                                               // leaving attack/ranged/movement leaves firing.
+    };
+
+    // ── Cast flags (kIntent_Cast / APMF_CastRequest::flags, ABI v5) ─────────────
+    // A bitmask a client passes with a cast-execution claim. APPEND-ONLY: never
+    // renumber an existing bit; OR in a new bit at the next free position.
+    enum CastFlags : std::uint32_t {
+        kCastFlag_None          = 0,
+        kCastFlag_FromPackage   = 1u << 0,   // param.form / req.spell is a TESPackage; APMF extracts
+                                             //   ONLY the cast portion (its SPELL-style input + target)
+                                             //   and NEVER runs/offers/installs/evaluates the package
+                                             //   (design.md §1a; the freeze half is simply never applied
+                                             //   because no package is applied).
+        kCastFlag_LeftHand      = 1u << 1,   // hand hint (default right). Scopes the per-hand deny AND the
+                                             //   0x0F equip seat (core/CastSeats.cpp / core/EquipGate.cpp).
+        kCastFlag_Concentration = 1u << 2,   // client says the executed cast is a held stream (TTL floor applies).
+        kCastFlag_DualCast      = 1u << 3,   // HINT: cast this spell with BOTH hands (dual-cast/empowered),
+                                             //   not one. The engine seats (core/EquipGate.cpp, core/CastGate.cpp)
+                                             //   admit the claimed spell/proxy as eligible on EITHER hand and deny
+                                             //   every competing spell/staff item on BOTH hands while the claim
+                                             //   stands, instead of scoping to the single hand kCastFlag_LeftHand
+                                             //   would select. It is still only a HINT: the engine's own scoring/
+                                             //   magicka/hand-readiness gates decide whether the AI actually arms
+                                             //   both hands, and APMF never forces a second hand open -- a follower
+                                             //   that cannot afford (or otherwise fails) the second hand simply
+                                             //   casts single-hand, exactly as an unclaimed dual-cast attempt would
+                                             //   degrade natively (composition, not substitution -- CLAUDE.md
+                                             //   principle 3; never masked, principle 7). A client MUST NOT set
+                                             //   kCastFlag_LeftHand alongside this bit -- dual-cast already claims
+                                             //   both hands, so a hand hint is meaningless and unspecified; if both
+                                             //   are set, DualCast takes priority (the seats' hand check is skipped
+                                             //   entirely) rather than picking one hand arbitrarily.
+                                             //   The mutual exclusivity above is between claims that DRIVE
+                                             //   something. A kCastFlag_DenyHandOnly claim drives nothing, so it is
+                                             //   outside this collision in both directions: it neither refuses nor
+                                             //   is refused by a dual claim, and a dual claim never evicts one. See
+                                             //   that flag's own text.
+
+        // ── DENY-ONLY HAND CLAIM (added 2026-09-06; bits 4-7 were free) ──────────
+        kCastFlag_DenyHandOnly  = 1u << 4,   // Claim the hand purely to DENY it. The client drives
+                                             //   NOTHING here and APMF asks the engine to arm nothing:
+                                             //   this is the missing half of the per-hand cast deny.
+                                             //
+                                             //   History: Docs/APMF_API-HISTORY.md#kcastflag-denyhandonly-problem
+                                             //
+                                             //   WHAT APMF DOES WITH IT. The claim stands on exactly the
+                                             //   hand kCastFlag_LeftHand selects (default right), with its
+                                             //   DRIVEN FORM FORCED TO NONE: APMF zeroes spell, proxy and
+                                             //   target on this claim regardless of what the request
+                                             //   carried, so no seat can ever seat, drive or classify for
+                                             //   it, and no delivery-flip proxy is minted. Every OTHER
+                                             //   spell/staff competing for that hand is then denied through
+                                             //   the SAME per-hand deny path a real claim already uses
+                                             //   (core/CastGate.cpp 0x0A, core/EquipGate.cpp 0x0F). It
+                                             //   fabricates no intent (CLAUDE.md principle 4): the client
+                                             //   declared "nothing else here", and that is precisely and
+                                             //   only what is enforced.
+                                             //
+                                             //   IT IS STILL A BOUNDED CAST CLAIM. Same TTL rules as any
+                                             //   other kIntent_Cast claim (kCastDefaultTtlMs / ttlMs,
+                                             //   clamped to kCastMaxTtlMs), and Repoint renews the window
+                                             //   the same way -- so a crashed client's deny-only claim
+                                             //   expires on its own, exactly like a driving one. A Repoint
+                                             //   on THIS claim renews the TTL and nothing else: its
+                                             //   `param.form` is forced back to 0, so a heartbeat can never
+                                             //   put a driven form onto a hand the client declared closed
+                                             //   (see Repoint in APMF_API_v3 below).
+                                             //
+                                             //   *** BASIS: THE TIE IS ENFORCED FOR YOU. ***
+                                             //   A deny-only claim is an ordinary claim in APMF's ordinary
+                                             //   arbitration -- highest basis owns -- with ONE rule added,
+                                             //   and APMF enforces it rather than asking the client to
+                                             //   remember it: AT AN EQUAL BASIS A DENY-ONLY CLAIM LOSES TO A
+                                             //   DRIVING CAST CLAIM. (Elsewhere a tie still keeps the
+                                             //   earliest claim; this is the one exception, and it applies
+                                             //   at EVERY winner-selection APMF makes for the cast channel,
+                                             //   so the channel OWNER and the per-hand gates can never
+                                             //   disagree about which claim won.)
+                                             //   The practical consequence, and the reason it is enforced
+                                             //   instead of documented: a client that issues every claim at
+                                             //   ONE uniform basis can put the floor down FIRST and still
+                                             //   have its own next gambit take the hand the instant that
+                                             //   gambit publishes -- no release/re-request gap, no
+                                             //   self-deny -- with the floor still standing underneath when
+                                             //   the gambit ends. This is enforcement of a fact the CLIENT
+                                             //   declared (this flag says the claim drives nothing), not a
+                                             //   precedence APMF invented.
+                                             //   What is still the client's call is a STRICT inversion: a
+                                             //   floor requested at a basis genuinely ABOVE a driving cast
+                                             //   claim wins, because there the client really did say the
+                                             //   hand must stay shut. Nothing is re-ranked or refused, but
+                                             //   it IS reported loudly at claim time ("[ch.8b] ...
+                                             //   DENY-ONLY FLOOR OUTRANKS A LIVE CAST ...",
+                                             //   core/ControlMap.cpp), because a follower holding a hand and
+                                             //   casting nothing is the hardest failure to read from a log
+                                             //   (CLAUDE.md principles 5 and 7).
+                                             //
+                                             //   *** IT COEXISTS WITH A DUAL-CAST CLAIM, BOTH WAYS. ***
+                                             //   kCastFlag_DualCast and a single-hand claim are mutually
+                                             //   exclusive on one actor (see that flag) -- the loser of that
+                                             //   collision is refused outright. A DENY-ONLY claim is OUTSIDE
+                                             //   that collision entirely, in both directions: it asks the
+                                             //   engine to arm nothing, so there is nothing for a dual claim
+                                             //   to collide with. A floor may be requested while a dual
+                                             //   claim stands, a dual claim may be requested while a floor
+                                             //   stands, neither is refused, and a dual claim NEVER evicts a
+                                             //   floor -- so the hand does not reopen for a client tick each
+                                             //   time a dual cast starts or ends. On the hands the dual
+                                             //   claim occupies it outranks the floor (or, at an equal
+                                             //   basis, displaces it by the tie rule above); when it ends
+                                             //   the floor is still there, with no gap.
+                                             //
+                                             //   *** WHAT A FLOORED HAND ADMITS: NOTHING. ***
+                                             //   Not "nothing except the client's own spells" -- NOTHING.
+                                             //   While the floor stands, core/CastGate.cpp (0x0A CheckCast)
+                                             //   and core/EquipGate.cpp (0x0F CheckShouldEquip) deny every
+                                             //   spell and staff on that hand, INCLUDING the claiming
+                                             //   client's own, because the floor names no form to admit. So
+                                             //   the rule is: CLAIM BEFORE YOU EXPECT THE AI TO ARM
+                                             //   ANYTHING ON A FLOORED HAND -- a driving kIntent_Cast claim
+                                             //   (which, per the tie rule above, takes the hand at an equal
+                                             //   basis) is how you reopen it, not an unclaimed cast.
+                                             //   A floor does NOT close the client's own direct
+                                             //   CastSpellImmediate force (it never consults CheckCast).
+                                             //   History: Docs/APMF_API-HISTORY.md#kcastflag-denyhandonly-evidence
+                                             //
+                                             //   COMPATIBILITY. This is an APPEND-ONLY bit inside the
+                                             //   already-frozen `flags` word -- no struct field added,
+                                             //   reordered or retyped, no vtable slot, so kABIVersion is
+                                             //   NOT bumped (a bump would make a client asking for the new
+                                             //   version get a null interface from an older APMF.dll --
+                                             //   APMF_GetInterface refuses anything above its own
+                                             //   kABIVersion). The consequence a client must know: an APMF
+                                             //   built before this bit existed IGNORES it, and the claim
+                                             //   then stands as a degenerate no-form claim that denies
+                                             //   nothing. Ship the pair together.
+
+        // ── POSITION CAST (ABI v11, 2026-09-23; bit 5 was free) ─────────────────
+        kCastFlag_AtPosition    = 1u << 5,   // Deliver `param.form` (a SpellItem) at the WORLD POINT
+                                             //   `param.pos` instead of at an actor. RequestEx ONLY:
+                                             //   APMF_CastRequest has no position field, so RequestCast
+                                             //   with this bit is REFUSED by name. Gate on
+                                             //   abiVersion >= 11 before setting it (an older APMF
+                                             //   ignores the bit and makes an ordinary actor-target claim).
+                                             //
+                                             //   OFF BY DEFAULT, AND NOT AN ENDPOINT. It rests on
+                                             //   Docs/INVARIANTS.md #0 action (e), adopted by marth with a
+                                             //   standing condition: the actor does NOT animate, and proper
+                                             //   animations are required for ALL actions, so no client may
+                                             //   ship a user-facing action on this alone (an animated path
+                                             //   through the engine's own cast seats is the goal; this is a
+                                             //   stepping stone or the delivery half of one). So
+                                             //   [PositionCast] bPositionCast defaults to 0 and every
+                                             //   request is REFUSED by name until a user sets it to 1.
+                                             //   kIntent_Travel's kTravel_ToPosition does not depend on it.
+                                             //
+                                             //   WHAT APMF DOES. On the game thread it places a
+                                             //   non-persistent XMarker (Skyrim.esm 0x3B) at the point, in
+                                             //   the cell that CONTAINS the point (outdoors: the loaded,
+                                             //   attached exterior cell of the actor's worldspace at those
+                                             //   coordinates, TES::GetCell; indoors: the actor's own cell),
+                                             //   and casts the spell FROM
+                                             //   that marker, blamed on the actor: the marker's instant
+                                             //   caster runs InterruptCast(false) then CastSpellImmediate(
+                                             //   spell, false, none, 1.0, false, 0.0, actor). That is the
+                                             //   exact sequence the engine's own Papyrus Spell.RemoteCast
+                                             //   runs (Docs/ADDRESS-TABLE-2026-09-15.md, ADDENDUM 2026-09-23). The actor
+                                             //   does not animate and its hands are untouched. APMF deletes
+                                             //   the marker one frame later (core/PositionCast.cpp).
+                                             //
+                                             //   WHY A MARKER CASTS AND THE ACTOR DOES NOT. The engine
+                                             //   places a Target Location spell cast by an NPC at the
+                                             //   CASTER's own magic node. It never reads the target it was
+                                             //   handed. So "the actor casts at a marker" lands at the
+                                             //   actor's hand. A caster that IS the marker lands at the
+                                             //   marker. Disassembly on both runtimes, same ADDENDUM.
+                                             //
+                                             //   WHAT IS ACCEPTED. A SpellItem with Target Location
+                                             //   delivery, fire-and-forget, no Summon Creature effect, and
+                                             //   NO PROJECTILE on any effect. The engine launches a Target
+                                             //   Location projectile only from the player's crosshair pick
+                                             //   (never for a marker caster, both runtimes), so a rune, a
+                                             //   trap or a lobbed shot would silently place nothing: it is
+                                             //   REFUSED on the game thread (logged).
+                                             //   Everything else is REFUSED by name in APMF.log:
+                                             //   * a SUMMON. The engine applies a summon effect ONLY to the
+                                             //     actor that cast it, so a marker can never summon. An
+                                             //     NPC's own summon already lands in front of it: the
+                                             //     engine's SummonCreatureEffect picks that spot itself.
+                                             //   * Self / Touch / Aimed / Target Actor delivery (use an
+                                             //     ordinary kIntent_Cast with an actor target).
+                                             //   * concentration and constant-effect spells.
+                                             //   * disease / ability / addiction spell types (Papyrus
+                                             //     RemoteCast refuses the same three).
+                                             //   * any other cast flag set alongside this one.
+                                             //   * a point whose cell is not loaded and attached (or not in
+                                             //     the actor's worldspace).
+                                             //   * THE ACTOR'S CAST FACET IS OWNED: a live kIntent_Cast
+                                             //     claim that would outrank a driving request at this basis
+                                             //     (a higher basis, a kCastFlag_DenyHandOnly floor included,
+                                             //     or an equal basis that drives something) refuses the
+                                             //     request synchronously.
+                                             //   AT THE CALL (kInvalidHandle): the flag, the point, a finite
+                                             //   basis and the facet check. ON THE GAME THREAD, logged as
+                                             //   "[poscast] request N REFUSED ...": the spell checks (a form
+                                             //   lookup cannot be made off the main thread safely), the
+                                             //   actor and cell checks, and the facet check AGAIN.
+                                             //   A Repoint carrying this bit on a live cast claim is
+                                             //   REFUSED and changes nothing.
+                                             //
+                                             //   IT IS A ONE-SHOT, NOT A CLAIM. It never enters the control
+                                             //   map, so no engine seat ever sees it (it can never be read
+                                             //   as an actor target) and it holds no facet. RequestEx
+                                             //   returns a handle for log correlation only: IsClaimLive is
+                                             //   false for it, Repoint and Release are no-ops. The
+                                             //   client owns resource cost (APMF charges no magicka, the
+                                             //   same as every CastSpellImmediate).
+
+        // ── OWN LINE OF SIGHT (ABI v18, 2026-10-05; bit 6 was free) ─────────────
+        kCastFlag_OwnLineOfSight = 1u << 6,  // Judge this claim's line of sight with HARBINGER'S OWN RAY
+                                             //   (see "ABI v18: LINE OF SIGHT AND AWARENESS") instead of
+                                             //   none at all. RequestCast ONLY (req.flags, with req.target
+                                             //   set): the degenerate RequestEx(kIntent_Cast) form carries no
+                                             //   target, so the bit there is REFUSED (kInvalidHandle, logged),
+                                             //   never accepted as a silent no-op.
+                                             //
+                                             //   WHY. Without this bit the claim is the authority on WHETHER
+                                             //   to cast (seat 0x06 answers YES from the claim), so a claim
+                                             //   aimed at a target behind a wall is cast into the wall. The
+                                             //   engine's own Actor::HasLineOfSight cannot be asked instead:
+                                             //   for an NPC viewer it does not cast a ray, it returns a CACHED
+                                             //   per-(viewer, target) answer the engine refreshes on its own
+                                             //   schedule, stale or false for targets it does not keep warm
+                                             //   (allies, the player).
+                                             //
+                                             //   WHAT APMF DOES WITH IT, while the claim stands and its target
+                                             //   is another actor:
+                                             //   * seat 0x06 (CheckStartCast) answers YES only while the own-ray
+                                             //     verdict for (actor -> target) is VISIBLE and at most
+                                             //     kLosFreshMs old. Otherwise it answers NO: the AI does not
+                                             //     start this cast now, the claim STANDS, and the next poll
+                                             //     asks again. The first poll after a claim (or a Repoint to a
+                                             //     new target) registers the pair; its first verdict arrives
+                                             //     within a frame or two, so the first cast waits that long.
+                                             //   * seat 0x07 (CheckStopCast, a held channel) STOPS the channel
+                                             //     when the verdict is OCCLUDED on two consecutive measurements
+                                             //     (a single borderline reading does not cut a heal beam).
+                                             //     UNKNOWN or UNAVAILABLE never stop a running channel.
+                                             //   * UNAVAILABLE (the ray cannot be cast: no havok world, the
+                                             //     caster has no character controller, an unloaded target)
+                                             //     holds the start like OCCLUDED and is logged with its reason.
+                                             //     It is NEVER treated as visible.
+                                             //   A SELF target (target 0, or the actor itself), and a
+                                             //   kCastFlag_DenyHandOnly claim, have no line to judge: the bit is
+                                             //   ignored on them. Everything else about the claim is unchanged.
+                                             //
+                                             //   REFUSED SYNCHRONOUSLY (kInvalidHandle, logged) while the
+                                             //   line-of-sight service is not armed (VR, a runtime other than
+                                             //   1.6.1170 / 1.5.97 / 1.7.104, a self-check refusal, [Sightline]
+                                             //   bOwnLineOfSight=0, or before kDataLoaded): keep your own test.
+                                             //   An APMF older than v18 IGNORES this bit and casts with no
+                                             //   test. Check abiVersion >= 18 before setting it.
+
+        kCastFlag_FloorSpellsOnly = 1u << 7, // ABI v20. Meaningful only with kCastFlag_DenyHandOnly: the floor
+                                             //   refuses spell/scroll/staff only. A one-hander, shield or torch in
+                                             //   that hand passes; a 2H, a bow or a no-hand item (unarmed) still
+                                             //   competes for the other hand and is refused while a claim holds it.
+                                             //   Gate on abiVersion >= 20. Docs/INTEGRATION.md "Spells-only floor".
+
+        // ── Bits 8-15: STOP PERCENT (added in-place; the word is byte-frozen) ────
+        // The seat that owns a concentration channel's duration is
+        // CombatMagicCaster::CheckStopCast (vfunc 0x07, core/CastSeats.cpp). Left
+        // native it stops when the TARGET's restore AV reaches
+        // lerp(0,0.5,defensiveMult)+0.25 -- so a client healing at a 60% threshold
+        // would get a ~0.25s pulse and an InterruptCast. These eight bits let the
+        // client state its OWN stop threshold as a whole percent 1..100 of the
+        // target's PERMANENT actor value; the seat stops the channel the moment the
+        // target reaches it.
+        //
+        // This is an APPEND-ONLY addition WITHIN the existing `flags` word -- no
+        // struct field was added, reordered or retyped, so APMF_CastRequest's layout
+        // is byte-identical and a client built before this reads/writes 0 here. 0
+        // means "no client threshold": the seat then stops at FULL restoration
+        // (pct >= 1.0), on target death/unresolvability, on claim release, or at the
+        // claim's TTL -- never a channel that runs forever. Build it with
+        // APMF_API::MakeStopPct(80).
+        kCastFlag_StopPctShift  = 8,
+        kCastFlag_StopPctMask   = 0xFFu << 8,
+    };
+
+    // Build the bits 8-15 stop-percent field for CastFlags (see above). `pct` is a
+    // whole percent of the target's PERMANENT actor value, 1..100; 0 = "no client
+    // threshold" (stop at full restoration). Clamped, never asserts.
+    inline constexpr std::uint32_t MakeStopPct(std::uint32_t pct) {
+        return ((pct > 100u ? 100u : pct) << kCastFlag_StopPctShift) & kCastFlag_StopPctMask;
+    }
+    // Read it back. Returns 0 when the client set none.
+    inline constexpr std::uint32_t ReadStopPct(std::uint32_t flags) {
+        return (flags & kCastFlag_StopPctMask) >> kCastFlag_StopPctShift;
+    }
+
+    // ABI v5: cast-window TTL bounds (kIntent_Cast is ALWAYS bounded -- never a
+    // standing hold, design.md §5a). ttlMs == 0 -> kCastDefaultTtlMs; any value is
+    // clamped to kCastMaxTtlMs. A crashed/forgetful client can never leave a
+    // standing cast hold: the claim auto-releases at expiry (ControlMap TTL pass).
+    //
+    // REPOINT RENEWS THE WINDOW (added 2026-09-06; no ABI change -- no slot, no
+    // field, no flag). Calling Repoint(handle, &param) on a live kIntent_Cast claim
+    // moves its deadline to now + the SAME (already-clamped) ttlMs it was granted,
+    // in addition to updating the stored param. A client that wants to hold a cast
+    // longer than one window therefore HEARTBEATS with Repoint instead of letting
+    // the claim die and re-requesting: the release/re-request cycle left the actor
+    // measurably UNCLAIMED for 0.26-0.61 s every window, and foreign spells equipped
+    // and charged inside that gap (2026-09-06 field diagnosis, RC2). The bound is
+    // unchanged for a client that stops asking -- the claim still dies ttlMs after
+    // its LAST RequestCast/Repoint -- so this is a renewable FLOOR, not a standing
+    // hold: crash-safety identical, live state no longer killed mid-cast.
+    inline constexpr std::uint32_t kCastDefaultTtlMs = 4000;
+    inline constexpr std::uint32_t kCastMaxTtlMs     = 15000;
+
+    // ── APMF_CastRequest (ABI v5) ──────────────────────────────────────────────
+    // The rich payload for RequestCast. Its own POD (NOT folded into APMF_Param, so
+    // the frozen APMF_Param layout is untouched). APPEND-ONLY: never reorder/retype
+    // an existing field; add new fields at the END. All fields optional except
+    // actor/spell; zero = "none".
+    struct APMF_CastRequest {
+        RE::FormID    spell;    // the spell the client will fire (or the package if FromPackage)
+        RE::FormID    proxy;    // runtime FF-form proxy the client fabricated for delivery (0 if none)
+        RE::FormID    target;   // intended target actor (0 = self). LOAD-BEARING since
+                                //   feat/ai-cast-seats-impl: the 0x0A GetMagicTarget seat hands
+                                //   this to the engine as the AI's magic target, and the 0x0D
+                                //   SetupAimController seat as its aim override, so the NPC's own
+                                //   cast lands here. (It was RECORD ONLY before the seats.)
+        std::uint32_t flags;    // kCastFlag_*
+        std::uint32_t ttlMs;    // bounded window; 0 -> kCastDefaultTtlMs. Clamped to kCastMaxTtlMs.
+    };
+
+    // ── Channel PARAM (ABI v2) ─────────────────────────────────────────────────
+    // A POD payload a client passes to RequestEx to say WHICH thing a channel acts
+    // on: the spell for cast-select, the target for combat-target, a scalar bias
+    // for the AV channels. It is a plain struct (every field always present) rather
+    // than a union so it stays trivially POD and unambiguous, and so a channel can
+    // read whichever field it needs. All-zero (`{}`) means "no param" — a channel
+    // that receives no param (or the v1 Request path) falls back to its default
+    // (e.g. cast-select's built-in Firebolt), so v1 behavior is preserved exactly.
+    //
+    // APPEND-ONLY: never reorder/retype an existing field; add new fields at the END
+    // (a v1-era caller zero-inits the whole struct, so appended fields read 0).
+    struct APMF_Param {
+        RE::FormID   form;   // a form the channel acts on (a SpellItem, an Actor, a
+                             //   TESPackage, a weapon/item...). 0 => channel default.
+        float        fval;   // a scalar (a bias / scale / factor). 0 => channel default.
+        std::int32_t ival;   // an integer/enum variant (e.g. a category bitmask).
+                             //   0 => default.
+        // Appended (feat/cast-act, marth 2026-09-05) -- END of the struct, so a
+        // zero-init caller (v1..v-this-pass) reads target=0/pos=0/0/0, byte-identical
+        // to before these existed. No new vtable slot, no APMF_API_vN, no
+        // abiVersion bump -- APMF_Param itself is append-only by design (see the
+        // struct's own comment above).
+        RE::FormID   target;   // an actor/ref this request acts ON (e.g. kIntent_SelectSpell's
+                               //   cast target). 0 => channel-specific fallback.
+        float        posX;    // a WORLD-LOCATION target (all-zero => unset). Reserved for a
+        float        posY;    //   location-delivery cast (Rune/AoE ground-target) -- the
+        float        posZ;    //   CLIENT picks the point (e.g. by enemy-count-in-radius);
+                               //   APMF never selects one. Also pre-provisions a future
+                               //   move-to-point destination. READ SINCE ABI v11 by
+                               //   kIntent_Cast when ival carries kCastFlag_AtPosition (a
+                               //   position cast; see that flag). When the flag is set,
+                               //   (0,0,0) is a legal point: the flag, not the value, says
+                               //   the field is in use. An actor target still rides
+                               //   kIntent_Cast's APMF_CastRequest (`req.target`,
+                               //   load-bearing at the engine seats).
+    };
+
+    // ── APMF_Param field usage, per Intent (at a glance) ────────────────────────
+    // A client may always pass an APMF_Param (RequestEx/Repoint zero-init a v1-era
+    // caller sees as "no param" too). This table says which Intents actually READ
+    // a field TODAY versus accept-and-ignore it -- read the per-Intent comments
+    // above for the full picture; this is the quick-scan version.
+    //
+    //   form   kIntent_SelectSpell     the spell FormID
+    //   ival   kIntent_SelectSpell     RETIRED/RESERVED -- the +ACT hand mode (bits 0-1) and
+    //                                  drive opt-in (bit 2) are no longer read by any
+    //                                  channel; ch.8 is gate-only again. Use kIntent_Cast.
+    //   target kIntent_SelectSpell     RETIRED/RESERVED (it was the +ACT drive's target)
+    //   pos    kIntent_SelectSpell     RESERVED (a location-delivery target; never wired)
+    //   form   kIntent_CombatTarget    the target actor
+    //   form   kIntent_ShoutPower      the shout/power FormID
+    //   form   kIntent_OfferPackage    the TESPackage FormID
+    //   form   kIntent_Equipment       optional, gates re-equip when set (see above)
+    //   ival   kIntent_CombatAction    a CombatActionCategory bitmask (see below)
+    //   form   kIntent_Cast            the spell (degenerate RequestEx form); RequestCast for
+    //   ival   kIntent_Cast            the rich payload -- ival = CastFlags on the degenerate form
+    //                                  (req.target / req.flags' hand + stop-percent are read by
+    //                                  the engine seats, core/CastSeats.cpp)
+    //   pos    kIntent_Cast            ABI v11: the WORLD POINT of a position cast, read ONLY
+    //                                  when ival has kCastFlag_AtPosition (then form = the spell,
+    //                                  ival = that flag alone). Ignored otherwise.
+    //   ival   kIntent_EquipAuthority  an EquipAuthFlags bitmask (the worn set itself is NOT a
+    //                                  param field -- it is declared with SetEquipSet, ABI v7)
+    //   form   kIntent_Travel          the DESTINATION: an object REFERENCE or a CELL (REQUIRED;
+    //                                  a 0 form, or any other record type, is refused)
+    //   fval   kIntent_Travel          the arrival radius in units (0 => 75u default, clamped 50-512);
+    //                                  not consulted when the destination is a CELL
+    //   ival   kIntent_Travel          a TravelFlags bitmask (see above)
+    //   pos    kIntent_Travel          ABI v11: the destination POINT when ival has kTravel_ToPosition
+    //                                  (form must then be 0; APMF walks the actor to its own XMarker
+    //                                  there). Without the flag: REFUSED if non-zero.
+    //   form   kIntent_Idle            ABI v17: the TESIdleForm to play (0 = the v1 form-free idle)
+    //   target kIntent_Idle            ABI v17: optional reference to play the idle AT (read only
+    //                                  when form != 0)
+    //   form   kIntent_TargetPin       ABI v13: the TARGET actor (REQUIRED; 0 or the actor itself
+    //                                  is refused).
+    //   ival   kIntent_TargetPin       ABI v18: a TargetPinFlags bitmask (0 = none). No other
+    //                                  field is read.
+    //   form   kIntent_CombatEntry     ABI v14: the TARGET actor (REQUIRED; 0 or the actor itself
+    //                                  is refused; the player may be the target, not the actor).
+    //                                  No other field is read.
+    //   fval   kIntent_CombatReentryDeny  ABI v15: the WINDOW in seconds (0 => 10 s; clamped to 120;
+    //                                  negative / NaN refused). No other field is read.
+    //   target kIntent_PursuitLeash    ABI v16: the ANCHOR actor (REQUIRED; 0 or the actor itself
+    //                                  is refused).
+    //   fval   kIntent_PursuitLeash    ABI v16: the RADIUS in game units (REQUIRED, > 0; 0,
+    //                                  negative or NaN is refused). No other field is read.
+    //   target kIntent_CombatApproach  ABI v19: X, the reference to close on (REQUIRED; 0 or the
+    //                                  actor itself is refused; the player is allowed).
+    //   fval   kIntent_CombatApproach  ABI v19: R, the radius in game units (REQUIRED, finite, > 0).
+    //   ival   kIntent_CombatApproach  ABI v19: a CombatApproachFlags bitmask (0 = end on arrival).
+    //   ival   kIntent_CastGuard       ABI v21: a CastGuardFlags bitmask. fval: the TTL in seconds.
+    //                                  form / pos are not read.
+    //   fval   kIntent_CombatSubstrate ABI v23: the TTL in seconds (0 => INI default; clamped to 15 s).
+    //   form   kIntent_Place           ABI v28: the DESTINATION, a REFERENCE or an INTERIOR CELL (REQUIRED).
+    //   pos    kIntent_Place           ABI v28: an OFFSET from a reference destination, or the POINT in a
+    //                                  cell destination (both in game units).
+    //   ival   kIntent_Place           ABI v28: a PlaceFlags bitmask (0 = none).
+    //   fval   kIntent_Place           ABI v28: the yaw in radians, read ONLY with kPlace_SetYaw.
+    //   none   every other Intent      accepted, not yet read by the channel
+    //
+    // fval is read ONLY by kIntent_Travel (ABI v10), kIntent_CombatReentryDeny (ABI v15),
+    // kIntent_PursuitLeash (ABI v16), kIntent_CombatApproach (ABI v19), kIntent_CastGuard (ABI v21),
+    // kIntent_CombatSubstrate (ABI v23) and kIntent_Place with kPlace_SetYaw (ABI v28);
+    // it stays reserved for a future per-request bias on ch.11, scale on ch.1a, factor on ch.16. target
+    // is read by kIntent_PursuitLeash (ABI v16, the anchor), kIntent_CombatApproach (ABI v19, X) and
+    // was by kIntent_SelectSpell (retired). pos is read by
+    // kIntent_Cast with kCastFlag_AtPosition and by kIntent_Travel with kTravel_ToPosition
+    // (both ABI v11), and by kIntent_Place (ABI v28). Without its flag, kIntent_Travel refuses a non-zero pos.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    // The v1 interface: a POD struct of function pointers. NO vtable. `abiVersion`
+    // is the first field so a client can sanity-check the layout it received.
+    // FROZEN — never edit this struct; a later ABI appends a new struct below.
+    struct APMF_API_v1 {
+        std::uint32_t abiVersion;   // == kABIVersion of the APMF that produced it
+
+        // Register a control claim: engage `intent`'s channel on the NPC `actor`
+        // (a FormID) at arbitration weight `basis`. Returns a handle to release
+        // later, or kInvalidHandle if no channel serves `intent`. When two clients
+        // claim the SAME channel on the SAME NPC, the higher `basis` owns it; on a
+        // tie the earlier claim owns it. The channel stays engaged until the LAST
+        // claim is released. Thread-safe (enqueues; applied on the game thread).
+        // Equivalent to RequestEx(actor, intent, basis, nullptr): no param, so the
+        // channel uses its default.
+        Handle (*Request)(RE::FormID actor, Intent intent, float basis);
+
+        // Release a claim previously returned by Request/RequestEx. When the last
+        // claim on a channel is released, APMF restores the AI (un-blocks). No-op on
+        // an unknown/stale handle. Thread-safe (enqueues). (Complete is a synonym
+        // for Release; there is one release operation.)
+        void (*Release)(Handle handle);
+    };
+
+    // The v2 interface: APMF_API_v1's members verbatim (identical initial sequence),
+    // then the appended RequestEx slot. A v1 client reading this object as
+    // APMF_API_v1* sees exactly the v1 prefix; a v2 client reads RequestEx too.
+    struct APMF_API_v2 {
+        std::uint32_t abiVersion;
+        Handle (*Request)(RE::FormID actor, Intent intent, float basis);
+        void   (*Release)(Handle handle);
+
+        // Like Request, but carries a POD param telling the channel WHICH thing to
+        // act on (see APMF_Param). `param` may be nullptr (== Request: channel
+        // default). The pointee is read and copied synchronously inside the call;
+        // APMF never retains the pointer, so a stack temporary is fine. For
+        // cast-select, param->form is the SpellItem the follower's AI should select
+        // and cast. Returns a handle, or kInvalidHandle if no channel serves
+        // `intent`. Thread-safe (enqueues; applied on the game thread).
+        Handle (*RequestEx)(RE::FormID actor, Intent intent, float basis,
+                            const APMF_Param* param);
+    };
+
+    // The v3 interface: APMF_API_v2's members verbatim (identical initial sequence),
+    // then the appended Repoint slot. A v1/v2 client reading this object through its
+    // own struct pointer sees exactly its prefix; a v3 client reads Repoint too.
+    struct APMF_API_v3 {
+        std::uint32_t abiVersion;
+        Handle (*Request)(RE::FormID actor, Intent intent, float basis);
+        void   (*Release)(Handle handle);
+        Handle (*RequestEx)(RE::FormID actor, Intent intent, float basis,
+                            const APMF_Param* param);
+
+        // RE-POINT an EXISTING claim in place: replace the claim's POD param without
+        // releasing/re-requesting, KEEPING THE SAME handle. If the claim currently
+        // OWNS its channel, the channel is re-pointed at the new param immediately
+        // (e.g. combat-target switches the held foe; cast-select switches the selected
+        // spell) with NO release/re-engage churn — so a held target/spell that merely
+        // CHANGES stays a single continuous claim for its whole lifetime, and a client
+        // reserves Release for when it is genuinely DONE (combat end / cast end), not
+        // for a mere retarget. `param` is read+copied synchronously; nullptr is a
+        // no-op. No-op on an unknown/stale handle. Thread-safe (enqueues; applied on
+        // the game thread). Its NON-owning-claim behavior: the stored param is updated
+        // so it takes effect if/when the claim later becomes the owner.
+        //
+        // -- ON A kIntent_Cast CLAIM, REPOINT IS A HEARTBEAT, NOT A RE-AIM ---------
+        // (pinned 2026-09-06.) For the cast channel specifically, Repoint has two
+        // jobs and one hard limit:
+        //   * IT RENEWS THE TTL. The deadline moves to now + the SAME (already
+        //     clamped) ttlMs the claim was granted, so a client that wants a cast
+        //     window longer than one ttlMs HEARTBEATS with Repoint instead of letting
+        //     the claim lapse and re-requesting. See kCastDefaultTtlMs below. This is
+        //     the intended, invited use.
+        //   * IT UPDATES THE NON-FORM PARAM FIELDS, exactly as on every other channel.
+        //   * IT CANNOT CHANGE WHAT THE CLAIM CASTS. A `param.form` different from the
+        //     claim's current spell is REFUSED (the claim keeps the spell it was
+        //     requested with) and the refusal is logged loudly -- never silently
+        //     honoured, never silently dropped. A cast claim's delivery-flip proxy,
+        //     its resolved target handle and its CastFlags were all resolved AGAINST
+        //     its original spell inside RequestCast, and Repoint re-runs none of that,
+        //     so honouring a form swap would leave the claim NAMED for spell B while
+        //     DRIVING A's proxy at A's target. To cast something else: Release the
+        //     handle and RequestCast the new spell.
+        //   * ON A kCastFlag_DenyHandOnly CLAIM `param.form` IS ALWAYS FORCED TO 0,
+        //     for the same reason RequestCast forces it: that claim drives nothing for
+        //     its whole life. A Repoint carrying a form is logged and ignored.
+        // A same-form heartbeat -- the shape a client should be sending -- hits none
+        // of those limits and behaves exactly as documented above.
+        void (*Repoint)(Handle handle, const APMF_Param* param);
+    };
+
+    // The v4 interface: APMF_API_v3's members verbatim (identical initial sequence),
+    // then the appended SetSpellAllowList slot. A v1/v2/v3 client reading this
+    // object through its own struct pointer sees exactly its prefix; a v4 client
+    // reads SetSpellAllowList too.
+    struct APMF_API_v4 {
+        std::uint32_t abiVersion;
+        Handle (*Request)(RE::FormID actor, Intent intent, float basis);
+        void   (*Release)(Handle handle);
+        Handle (*RequestEx)(RE::FormID actor, Intent intent, float basis,
+                            const APMF_Param* param);
+        void   (*Repoint)(Handle handle, const APMF_Param* param);
+
+        // Attach a bounded ADDITIONAL allow-set of spell FormIDs to an EXISTING
+        // kIntent_SelectSpell claim (`handle`, as returned by RequestEx/Request):
+        // the actor's AI may cast the claim's primary `param.form` (the
+        // selected spell, unchanged) OR any spell FormID in `forms` -- e.g. a
+        // bounded exempt set of heal/buff spells a client wants to allow
+        // alongside its chosen spell. `forms` is READ AND COPIED
+        // synchronously inside the call -- APMF never retains the pointer, same
+        // contract as RequestEx/Repoint's `param` (a stack-local array is fine).
+        // `count` is silently clamped to kMaxSpellAllowList; a count over the
+        // bound degrades to "the excess spells are treated as non-exempt" (never
+        // a crash or an unbounded write). `count == 0` or `forms == nullptr`
+        // clears the allow-set -- the claim falls back to today's exact
+        // claim.form-only match, so a v1-v3 client, or a v4 client that never
+        // calls this, is byte-for-byte unaffected. A stale/unknown `handle`, or a
+        // handle whose claim is on a channel OTHER than kIntent_SelectSpell, is a
+        // silent no-op (mirrors Repoint's own no-op-on-unknown-handle discipline).
+        // Updates the STORED claim whether or not it currently OWNS the channel --
+        // same non-owning semantics as Repoint, so a claim that later wins
+        // arbitration already carries its allow-set. Thread-safe (enqueues;
+        // applied on the game thread, never off it).
+        void (*SetSpellAllowList)(Handle handle, const RE::FormID* forms, std::uint32_t count);
+    };
+
+    // The v5 interface: APMF_API_v4's members verbatim (via prefix EXTENSION -- the
+    // base subobject lays out first, so its identical initial sequence is preserved
+    // and a v1..v4 client reading this object through its own struct pointer sees
+    // exactly its prefix), then the appended RequestCast slot. This header is
+    // BYTE-SHARED with MFO: the declaration below is authoritative and must be
+    // mirrored byte-identically on the client side.
+    struct APMF_API_v5 : APMF_API_v4 {
+        // Claim the cast-EXECUTION facet (ch.8b) for actor `actor` at arbitration
+        // weight `basis`, carrying the rich APMF_CastRequest, for a bounded TTL.
+        //
+        // WHAT HAPPENS (updated for the shipped v0.9.1/v0.9.2 behaviour -- the older
+        // "the CLIENT fires its own animated cast" contract is RETIRED): while the
+        // claim stands, APMF answers the engine's own cast-decision points so the
+        // NPC's OWN combat AI selects, equips, charges, aims, fires and channels
+        // `req.spell` at `req.target`. **APMF still makes NO engine cast call of any
+        // kind** -- no EquipSpell, no CastSpell, no CastSpellImmediate, no anim-graph
+        // write. The animation is the game's own because the game is the one casting.
+        // The CLIENT brings no cast mechanism at all; it only declares what and where.
+        //
+        // This is what makes a heal-OTHER cast possible: the vanilla combat AI cannot
+        // classify a beneficial spell aimed at another actor, so it never builds one
+        // as a candidate and never considers casting it. APMF supplies that one
+        // missing classification decision and the engine does the rest.
+        //
+        // `req` is READ AND COPIED synchronously inside the call;
+        // APMF never retains the pointer, so a stack temporary is fine. Returns a
+        // handle to release later, or kInvalidHandle if the cast channel is not
+        // registered. A kCastFlag_FromPackage request whose package carries no
+        // readable spell input is REFUSED at drain (the handle becomes inert; APMF
+        // never runs, offers, or evaluates the package). Safe from any thread (POD
+        // captured; applied on the game thread).
+        Handle (*RequestCast)(RE::FormID actor, float basis, const APMF_CastRequest* req);
+    };
+
+    // The v6 interface: APMF_API_v5 verbatim (prefix extension) + two read-only cast-claim observability
+    // slots. BYTE-SHARED with MFO: mirror byte-identically.
+    // History: Docs/APMF_API-HISTORY.md#api-v6-preamble
+    struct APMF_API_v6 : APMF_API_v5 {
+        // Hand back the delivery-flip proxy FormID APMF minted internally for the
+        // cast claim behind `handle` (see APMF_CastRequest::proxy and
+        // RequestCast's doc comment -- APMF fabricates this substitute FormID for
+        // delivery, distinct from the client-supplied `req.proxy`). Returns 0 if
+        // `handle` is unknown/stale/released, or if that claim minted no proxy.
+        // Read-only; does not affect arbitration or claim lifetime in any way.
+        // Safe from any thread (RCU snapshot read, same discipline as
+        // TryGetCastClaim/TryGetCastSeatClaim on the APMF side).
+        RE::FormID (*GetCastProxy)(Handle handle);
+
+        // True while APMF still holds the claim behind `handle` -- i.e. it has not
+        // been released (by the client, or as the losing side of a re-arbitration)
+        // and has not auto-expired at its TTL (design.md §5a "never a standing
+        // hold"). False for an unknown/stale/already-gone handle. A client should
+        // treat `false` exactly like `kInvalidHandle` would have been treated
+        // before this existed: re-request rather than keep believing a dead handle
+        // is still in force. Read-only; safe from any thread, same discipline as
+        // GetCastProxy above.
+        bool (*IsClaimLive)(Handle handle);
+    };
+
+    // The v7 interface: APMF_API_v6's members verbatim (prefix EXTENSION, same shape
+    // as every prior revision), then ONE appended slot: the equip-authority
+    // declaration. This header is BYTE-SHARED with MFO: the declaration below is
+    // authoritative and must be mirrored byte-identically on the client side.
+    //
+    // WHY A BUMP (INVARIANTS #14b): a new function-pointer slot needs an
+    // `abiVersion >= 7` test before a client may call it. A v1..v6 client reading
+    // this object through its own struct pointer still sees exactly its prefix.
+    struct APMF_API_v7 : APMF_API_v6 {
+        // DECLARE the worn set for the actor behind an EXISTING kIntent_EquipAuthority
+        // claim (`handle`, as returned by RequestEx/Request). `forms` are BASE
+        // FormIDs (weapons, armor, jewelry -- anything ActorEquipManager equips);
+        // `count` is silently clamped to kMaxEquipSet. `forms` is READ AND COPIED
+        // synchronously inside the call -- APMF never retains the pointer, same
+        // contract as RequestEx/Repoint's `param` and SetSpellAllowList's array (a
+        // stack-local array is fine). Applied on the game thread at the next Drain.
+        //
+        // WHAT HAPPENS, in order, when the declaring claim OWNS the channel:
+        //   1. the set is published into the lock-free snapshot the equip seat reads
+        //      (Docs/INVARIANTS.md #12), so from the next engine equip on, any item
+        //      NOT in `forms` is refused for this actor (ABI v9: within the claim's
+        //      OWNED categories only, default all -- see SetEquipScope; path-classified and logged;
+        //      Papyrus/console pass unless kEquipAuth_DenyScript; observe-only logs
+        //      `would-deny` and refuses nothing);
+        //   2. one main-thread pass equips each declared item the actor is not
+        //      already wearing, through the engine's own ActorEquipManager::EquipObject
+        //      (queued, not forced, sounds on) -- exactly what the client would have
+        //      called itself, now issued by the framework so the seat lets it through.
+        //      APMF never UNEQUIPS anything: the engine's own worker displaces whatever
+        //      occupies a declared item's slot, the ordinary way. No re-assert loop
+        //      follows: the seat is what keeps the engine from undoing the set.
+        // DECLARE, DO NOT TICK. Call this when the loadout CHANGES. Each call on the
+        // owning claim is a declaration event and walks the inventory; an item APMF
+        // already queued is held 3 s before it is queued again, so a per-tick
+        // re-send is bounded, logged work, not a queue pile-up -- but it is still
+        // wasted work. The set MUST BE SIMULTANEOUSLY
+        // WEARABLE: a two-hander and a shield, or two items for one slot, make the
+        // engine displace one with the other on every pass. That is the client's
+        // error and the log will show it; APMF never picks which one wins.
+        // A declaration on a claim that does NOT own the channel is STORED (same
+        // non-owning semantics as Repoint/SetSpellAllowList) and takes effect the
+        // moment that claim wins arbitration: the seat re-arms on ITS set and the
+        // same one-pass equip runs for it (a win is a declaration event too).
+        // `count == 0` or `forms == nullptr` CLEARS the declaration: the seat passes
+        // every engine equip through again (nothing is unequipped), and a Release
+        // does the same. A stale/unknown `handle`, or a handle whose claim is on a
+        // channel OTHER than kIntent_EquipAuthority, is a silent no-op (mirrors
+        // Repoint's own no-op-on-unknown-handle discipline). Thread-safe (enqueues).
+        //
+        // NOT provided, deliberately: a per-item callback. The seat runs on whatever
+        // engine thread performs the equip; running client code there would hand the
+        // client a combat-thread re-entrancy hazard it cannot see. The declaration
+        // IS the policy; the log line (`[apmf][equip-obs]`) is the observability.
+        void (*SetEquipSet)(Handle handle, const RE::FormID* forms, std::uint32_t count);
+    };
+
+    // The v8 interface: APMF_API_v7's members verbatim (prefix EXTENSION), then ONE
+    // appended slot: the per-item-hand form of the equip-authority declaration.
+    // This header is BYTE-SHARED with MFO: the declaration below is authoritative
+    // and must be mirrored byte-identically on the client side.
+    //
+    // WHY A BUMP (INVARIANTS #14b): a new function-pointer slot needs an
+    // `abiVersion >= 8` test before a client may call it. A v1..v7 client reading
+    // this object through its own struct pointer still sees exactly its prefix;
+    // v7's SetEquipSet is unchanged and is now implemented AS SetEquipSetEx with
+    // every entry's slot = kEquipSlot_Default.
+    struct APMF_API_v8 : APMF_API_v7 {
+        // DECLARE the worn set WITH A HAND PER ITEM. Everything SetEquipSet's doc
+        // comment says holds here too (same claim, same clamp to kMaxEquipSet, same
+        // synchronous copy, same clear on count == 0 / entries == nullptr, same
+        // no-op on a stale handle, same declare-do-not-tick rule). The differences:
+        //   * `entries[i].slot` names the hand APMF equips `entries[i].form` into:
+        //     kEquipSlot_Right / kEquipSlot_Left pass the engine's own RightHand /
+        //     LeftHand equip slot (Skyrim.esm EQUP 0x13F42 / 0x13F43) to
+        //     ActorEquipManager::EquipObject; kEquipSlot_Default passes none and the
+        //     engine picks, exactly as v7 does. Use Right/Left ONLY for hand-held
+        //     items (a one-hand weapon, a shield, a torch); declare a two-hander, a
+        //     bow, ammo and body armor with kEquipSlot_Default.
+        //   * "not worn" for a Right/Left entry means "not in THAT hand" (the
+        //     engine's own equipped-object-per-hand read), so a sword the actor holds
+        //     in the right hand, declared Left, is re-equipped into the left hand.
+        //     A Default entry is "not worn" exactly as in v7 (no worn instance).
+        //   * The SAME form may appear twice, once per hand (two identical daggers,
+        //     dual-wielded): APMF counts the instances it needs per hand against the
+        //     inventory count, equips each, and skips (logged) any instance the
+        //     actor does not own enough copies for.
+        //   * The DENY half is unchanged: the seat compares FormIDs only. A declared
+        //     item is in-set whichever hand the engine tries to put it in; the hand
+        //     is what APMF's own equip pass enforces, not what the seat refuses.
+        // GOVERNED TYPES (v8; applies to v7's SetEquipSet too): the seat governs only
+        // ARMO, WEAP, AMMO and LIGH (torch) equips. Every other form type -- a potion,
+        // food, a scroll, an ingredient, a book -- passes the seat untouched (logged
+        // once per actor and type at debug level), so DrinkPotion and the AI's own
+        // potion use are never refused. APMF's equip pass likewise skips (and logs) a
+        // declared item of any other type: equipping a potion is drinking it.
+        void (*SetEquipSetEx)(Handle handle, const APMF_EquipEntry* entries, std::uint32_t count);
+
+        // TRUE only when the equip seat is INSTALLED (the two worker call sites
+        // byte-verified and patched on this runtime) AND APMF.ini's [EquipAuthority]
+        // bEquipObserveOnly is 0 -- i.e. an off-set engine equip on a claimed actor
+        // is actually REFUSED, not merely logged `would-deny`. FALSE in observe
+        // mode, before kDataLoaded, with bEquipAuthority=0, on VR, on a runtime
+        // other than 1.6.1170 / 1.5.97, or after a site-verify refusal. A claim's
+        // own kEquipAuth_ObserveOnly bit is not consulted (the client that set it
+        // knows). Read-only, safe from any thread, may change once at kDataLoaded
+        // and never afterwards.
+        //
+        // History: Docs/APMF_API-HISTORY.md#isequipauthorityenforced-why
+        bool (*IsEquipAuthorityEnforced)(void);
+    };
+
+    // The v9 interface: APMF_API_v8's members verbatim (prefix EXTENSION), then ONE
+    // appended slot: the SCOPE of an equip-authority claim. This header is
+    // BYTE-SHARED with MFO: the declaration below is authoritative and must be
+    // mirrored byte-identically on the client side.
+    //
+    // WHY A BUMP (INVARIANTS #14b): a new function-pointer slot needs an
+    // `abiVersion >= 9` test before a client may call it. A v1..v8 client reading
+    // this object through its own struct pointer still sees exactly its prefix;
+    // every such client runs with the default scope {kEquipCat_All, 0}, which is
+    // v8's whole-facet behaviour unchanged.
+    struct APMF_API_v9 : APMF_API_v8 {
+        // SCOPE the authority of an EXISTING kIntent_EquipAuthority claim (`handle`)
+        // to the categories in `scope->owned`, and refuse the actor's equips into the
+        // categories in `scope->denied` outright. See APMF_EquipScope for what each
+        // mask means and EquipCategory for how an item is mapped to categories.
+        //   * `scope` is READ AND COPIED synchronously inside the call (APMF never
+        //     retains the pointer; a stack temporary is fine). Applied on the game
+        //     thread at the next Drain, like SetEquipSetEx.
+        //   * `scope == nullptr` RESETS the claim to the default {kEquipCat_All, 0}.
+        //   * Bits outside kEquipCat_All are MASKED OFF (logged once per handle),
+        //     never refused: a client built against a later ABI degrades to what
+        //     this APMF knows.
+        //   * A stale/unknown handle, or a handle on a channel other than
+        //     kIntent_EquipAuthority, is a silent no-op (SetEquipSet's discipline).
+        //   * The scope is stored on the claim whether or not it owns the channel
+        //     (non-owning semantics, like a declaration) and rides the SAME snapshot
+        //     read as the set: the seat never sees a set from one generation and a
+        //     scope from another. An applied CHANGE on the OWNING claim is a
+        //     declaration event -> one enforce hop after Publish, exactly like an
+        //     applied SetEquipSetEx. An unchanged re-send fires nothing.
+        //   * The seat's verdict for a governed equip on a claimed actor, in order:
+        //       script/console without DenyScript              -> allow (exempt)
+        //       PlayerMenu without DenyPlayerMenu               -> allow (player agency)
+        //       competes & denied                               -> deny (even if in-set)
+        //       competes & owned: no declaration or in-set      -> allow
+        //       competes & owned: off-set                       -> deny
+        //       else (no owned, no denied category)             -> allow (owned=0)
+        //     Observe-only turns each deny into `would-deny`.
+        //   * The enforce pass equips a declared item only when EVERY category it
+        //     competes for is owned and NONE is denied; the rest are skipped and
+        //     counted (`skipped-unowned` / `skipped-denied` on the pass line). It
+        //     still never unequips anything.
+        // A WEAP declared with kEquipSlot_Default that is one-handed competes for
+        // BOTH hands (the hand is not known until the engine picks); declare the hand
+        // with SetEquipSetEx when only one is owned.
+        void (*SetEquipScope)(Handle handle, const APMF_EquipScope* scope);
+    };
+
+    // ── ABI v11: SPACE QUERIES ──────────────────────────────────────────────────
+    // Two read-only questions a client asks before it declares something that needs a
+    // place in the world: "where is an empty, standable spot over there?" and "which
+    // hostile actors are inside this sphere?". They serve a position cast
+    // (kCastFlag_AtPosition), a travel point (kTravel_ToPosition), and anything else
+    // that has to pick a point. APMF ANSWERS; the client DECIDES (CLAUDE.md principle 4).
+    //
+    // WHAT A QUERY IS NOT. It claims no facet, holds nothing, writes nothing into the
+    // world or the control map, and has no handle. One intent is still one facet: a
+    // query is not an intent at all, and there is no combined query-and-cast call.
+    //
+    // THREADING: SYNCHRONOUS, TRUE MAIN THREAD ONLY. Ray casts and the engine's
+    // hostility test must run on the game's main thread. A query called from any other
+    // thread does no work and returns kQuery_NotMainThread at once. The main thread
+    // here is the thread that runs the PLAYER's Actor::Update, the same seat APMF drains
+    // its own request queue from. A client already on that thread (for example inside
+    // its own player-Update pump; MFO's MainThread::Post runs there) calls straight in.
+    // A client on a worker thread moves the call onto that thread first. SKSE's
+    // TaskInterface::AddTask is NOT that thread (it runs on a job worker).
+    //
+    // SIZES. Every v11 struct starts with `size`. The caller sets it to
+    // sizeof(struct) as compiled against its header. APMF refuses an input whose size
+    // is below the v11 layout (kQuery_BadArgs) and never writes an output past the size
+    // the caller declared. A later ABI may append fields; an older caller keeps working.
+    //
+    // No exception crosses the boundary: a throw inside a query returns kQuery_Failed.
+
+    enum QueryStatus : std::uint32_t {
+        kQuery_Ok             = 0,
+        kQuery_NotMainThread  = 1,   // called off the main thread; nothing was done
+        kQuery_BadArgs        = 2,   // null pointer, short `size`, or a non-positive distance/radius
+        kQuery_Unsupported    = 3,   // VR, a runtime APMF has not verified, or before kDataLoaded
+        kQuery_NoOrigin       = 4,   // the origin/side FormID is not a loaded reference (actor for side)
+        kQuery_NoWorld        = 5,   // the origin has no attached cell or no havok world
+        kQuery_Blocked        = 6,   // geometry (or an actor) between the origin and the point; detail = layer
+        kQuery_NoGround       = 7,   // nothing to stand on within maxDrop under the point: a void or a drop
+        kQuery_NotGround      = 8,   // the ground ray hit something that is not static, terrain or ground; detail = layer
+        kQuery_Occupied       = 9,   // a live actor stands inside the clearance; detail = its FormID
+        kQuery_NoClearance    = 10,  // geometry inside the clearance radius; detail = layer
+        kQuery_Ledge          = 11,  // the clearance ring is not level (a drop or step over 48u at its edge)
+        kQuery_Failed         = 12,  // an exception was caught; nothing was returned
+    };
+
+    enum SpaceFlags : std::uint32_t {
+        kSpaceFlag_None          = 0,
+        kSpaceFlag_OriginIsPoint = 1u << 0,   // walk from (originX, originY, originZ), a FEET-level point in
+                                              //   the origin reference's cell and worldspace, instead of from
+                                              //   the reference's own position
+        kSpaceFlag_UseHeading    = 1u << 1,   // walk along `heading` (radians, Skyrim's angle Z: forward is
+                                              //   (sin h, cos h)) instead of the origin reference's facing
+        kSpaceFlag_ClampToWall   = 1u << 2,   // a wall before `distance` shortens the walk to (hit - clearance)
+                                              //   instead of returning kQuery_Blocked. Nothing else is relaxed.
+    };
+
+    // FindEmptySpace input. EXACT LAYOUT (byte-shared): 44 bytes.
+    struct APMF_SpaceQuery {
+        std::uint32_t size;        // = sizeof(APMF_SpaceQuery)
+        RE::FormID    origin;      // REQUIRED. A loaded reference, actor or not. Its cell supplies the havok
+                                   //   world. If it is an actor, the rays skip its own capsule.
+        float         originX;     // read only with kSpaceFlag_OriginIsPoint
+        float         originY;
+        float         originZ;
+        float         heading;     // read only with kSpaceFlag_UseHeading
+        float         distance;    // how far along the direction, > 0; clamped to 2048 (logged)
+        float         clearance;   // the free radius wanted around the point, > 0; clamped to [16, 512]
+        float         maxDrop;     // how far the ground may sit below the origin's feet; 0 => 128; clamped to 1024
+        std::uint32_t flags;       // SpaceFlags
+        std::uint32_t reserved;    // MUST be 0
+    };
+
+    // FindEmptySpace output. EXACT LAYOUT (byte-shared): 24 bytes.
+    struct APMF_SpaceResult {
+        std::uint32_t size;        // the CALLER sets = sizeof(APMF_SpaceResult)
+        std::uint32_t status;      // a QueryStatus (the same value the call returns)
+        float         x;           // the ground point, valid only when status == kQuery_Ok
+        float         y;
+        float         z;
+        std::uint32_t detail;      // the collision layer that stopped a ray, or the occupying actor's
+                                   //   FormID (kQuery_Occupied); 0 otherwise
+    };
+
+    // FindHostilesInSpace input. EXACT LAYOUT (byte-shared): 24 bytes.
+    struct APMF_HostileQuery {
+        std::uint32_t size;        // = sizeof(APMF_HostileQuery)
+        RE::FormID    side;        // REQUIRED. The loaded actor whose side we are on.
+        float         x;           // the sphere's centre, in the side actor's cell/worldspace
+        float         y;
+        float         z;
+        float         radius;      // > 0; clamped to 4096 (logged)
+    };
+
+    static_assert(sizeof(APMF_SpaceQuery) == 44,   "APMF_SpaceQuery is 44 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_SpaceQuery, origin)   == 4,  "origin at +4");
+    static_assert(offsetof(APMF_SpaceQuery, heading)  == 20, "heading at +20");
+    static_assert(offsetof(APMF_SpaceQuery, flags)    == 36, "flags at +36");
+    static_assert(sizeof(APMF_SpaceResult) == 24,  "APMF_SpaceResult is 24 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_SpaceResult, x)       == 8,  "x at +8");
+    static_assert(offsetof(APMF_SpaceResult, detail)  == 20, "detail at +20");
+    static_assert(sizeof(APMF_HostileQuery) == 24, "APMF_HostileQuery is 24 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_HostileQuery, radius) == 20, "radius at +20");
+
+    // The most actors FindHostilesInSpace ever writes, whatever capacity the caller passes.
+    inline constexpr std::uint32_t kMaxHostileResults = 64;
+
+    // The v11 interface: APMF_API_v9's members verbatim (prefix EXTENSION; there is no
+    // APMF_API_v10 struct because ABI v10 added no slot), then the two query slots.
+    // This header is BYTE-SHARED with MFO: the declaration below is authoritative and
+    // must be mirrored byte-identically on the client side.
+    //
+    // WHY A BUMP (INVARIANTS #14b): new function-pointer slots need an
+    // `abiVersion >= 11` test before a client may call them.
+    struct APMF_API_v11 : APMF_API_v9 {
+        // Find a standable, empty point `q->distance` units from the origin along the
+        // direction. Returns a QueryStatus and writes the same status (plus the point on
+        // success) into `*out`. MAIN THREAD ONLY (see the section header).
+        //   The walk: a ray at the origin's chest height (feet + 64u) out to the point,
+        //   then a ray straight down from there to (feet - maxDrop). The ground it finds
+        //   must be static, terrain or ground (the three layers the engine itself accepts
+        //   for a Target Location placement); anything else is kQuery_NotGround, and an
+        //   actor's capsule under the point is kQuery_Occupied. Then the clearance:
+        //   eight level rays of `clearance` length at the point's knee height (+32u)
+        //   must hit nothing, four ground rays at the clearance ring must land within 48u
+        //   of the point's height, and no live actor may stand within `clearance` + 32u.
+        //   Every failure names itself; nothing is retried or relaxed except by
+        //   kSpaceFlag_ClampToWall. Cost: at most 14 ray casts plus one pass over the
+        //   loaded ("high") actors.
+        std::uint32_t (*FindEmptySpace)(const APMF_SpaceQuery* q, APMF_SpaceResult* out);
+
+        // List the live actors inside the sphere that the engine considers HOSTILE to
+        // `q->side`. The test is the engine's own `Actor::IsHostileToActor`, asked from
+        // each candidate: candidate->IsHostileToActor(side). That is the same call
+        // Papyrus Actor.IsHostileToActor makes. No faction list is kept here.
+        //   Candidates: every loaded ("high") actor plus the player, in the side actor's
+        //   worldspace (or, indoors, its cell), alive, enabled, not the side actor, with
+        //   a 3D distance to the centre <= radius.
+        //   Output: up to min(capacity, kMaxHostileResults) FormIDs, NEAREST FIRST.
+        //   `*outCount` = how many were written. `outTotal` (may be null) = how many
+        //   matched before the cap, so a caller can tell a full sphere from a truncated
+        //   list. Returns a QueryStatus. MAIN THREAD ONLY.
+        //   Cost: one pass over the high actors (one distance each), one engine
+        //   hostility test per actor inside the sphere, and a sort of the matches.
+        std::uint32_t (*FindHostilesInSpace)(const APMF_HostileQuery* q, RE::FormID* outActors,
+                                             std::uint32_t capacity, std::uint32_t* outCount,
+                                             std::uint32_t* outTotal);
+    };
+
+    // The v12 interface: APMF_API_v11's members verbatim (prefix EXTENSION), then ONE
+    // appended slot: the travel leg-state read. This header is BYTE-SHARED with MFO: the
+    // declaration below is authoritative and must be mirrored byte-identically on the
+    // client side.
+    //
+    // WHY A BUMP (INVARIANTS #14b): a new function-pointer slot needs an
+    // `abiVersion >= 12` test before a client may call it.
+    struct APMF_API_v12 : APMF_API_v11 {
+        // Read the ch.19 travel leg state of `actor` (see TravelLegState above). Returns the
+        // state and, when `out` is non-null and `out->size` covers the v12 layout, fills
+        // `*out` (it writes nothing into a shorter struct). `out` may be null for a
+        // state-only read. The state describes the actor's leg, which is the leg of the
+        // WINNING kIntent_Travel claim on it; a client whose claim is outranked sees the
+        // owner's leg, so compare ownerHandle with your own handle.
+        //   READ-ONLY and SAFE FROM ANY THREAD: APMF copies a small per-actor record under
+        //   a mutex, the same "snapshot read" contract as IsClaimLive. It claims nothing,
+        //   holds nothing and changes nothing. The state is updated on the game thread as
+        //   the leg changes, so a read right after a Repoint may still show the previous
+        //   leg's end for up to a frame (check ownerHandle, destForm and seq).
+        //   The state is not saved: after a save load an actor reads kLeg_None until its
+        //   claim is made again.
+        //   A throw inside returns kLeg_None and writes nothing.
+        std::uint32_t (*GetTravelLegState)(RE::FormID actor, APMF_TravelLegInfo* out);
+    };
+
+    // ── ABI v18: LINE OF SIGHT AND AWARENESS (2026-10-05, ClickUp 86e3h6qj9) ────
+    // History: Docs/APMF_API-HISTORY.md#abi-v18-los-origin
+    // THE OWN RAY, THREADING AND COST, WHO KEEPS A PAIR MEASURED: Docs/APMF_API-REFERENCE.md#abi-v18-own-ray
+    // History: Docs/APMF_API-HISTORY.md#abi-v18-los-recipe
+
+    enum LosVerdict : std::uint32_t {
+        kLos_Unknown     = 0,   // never measured yet, or the newest measurement is older than
+                                //   kLosFreshMs. NOT seen. Ask again: the ask itself queues it.
+        kLos_Visible     = 1,   // the own ray reached the target (see THE OWN RAY)
+        kLos_Occluded    = 2,   // every ray was blocked (or the target is in another havok world)
+        kLos_Unavailable = 3,   // the ray could not be cast; APMF_LosInfo::why says why
+        kLos_Unsupported = 4,   // the line-of-sight service is not armed (VR, a runtime other than
+                                //   1.6.1170 / 1.5.97 / 1.7.104, a self-check refusal, [Sightline]
+                                //   bOwnLineOfSight=0, or before kDataLoaded): keep your own test
+    };
+
+    enum LosWhy : std::uint32_t {
+        kLosWhy_None            = 0,
+        kLosWhy_BadArgs         = 1,   // viewer or target is 0, or they are the same actor
+        kLosWhy_ViewerNotLoaded = 2,   // the viewer is not a loaded, live actor
+        kLosWhy_TargetNotLoaded = 3,   // the target is not a loaded actor
+        kLosWhy_NoWorld         = 4,   // the viewer's cell is not attached or has no havok world
+        kLosWhy_NoController    = 5,   // the viewer has no character controller (its collision group
+                                       //   cannot be excluded, so its own capsule would block the ray)
+        kLosWhy_OtherWorld      = 6,   // (with kLos_Occluded) the target is in a different havok world
+        kLosWhy_TableFull       = 7,   // every tracked pair is in use; this pair is not measured yet
+        kLosWhy_PickSkipped     = 8,   // the engine skipped the ray (its own pick early-out, which
+                                       //   returns without casting); measured again at the next refresh
+    };
+
+    // GetLineOfSight output. EXACT LAYOUT (byte-shared): 24 bytes.
+    struct APMF_LosInfo {
+        std::uint32_t size;         // +0   the CALLER sets = sizeof(APMF_LosInfo)
+        std::uint32_t verdict;      // +4   a LosVerdict (the same value the call returns)
+        std::uint32_t ageMs;        // +8   milliseconds since the stored measurement; 0xFFFFFFFF = never
+        std::uint32_t occludedRun;  // +12  consecutive OCCLUDED measurements of this pair (0 after a VISIBLE)
+        std::uint32_t sample;       // +16  the ray that was clear: 1 feet, 2 torso, 3 head; 0 = none
+        std::uint32_t why;          // +20  a LosWhy (UNAVAILABLE's reason; kLosWhy_OtherWorld on OCCLUDED)
+    };
+    static_assert(sizeof(APMF_LosInfo) == 24, "APMF_LosInfo is 24 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_LosInfo, ageMs)       == 8,  "ageMs at +8");
+    static_assert(offsetof(APMF_LosInfo, occludedRun) == 12, "occludedRun at +12");
+    static_assert(offsetof(APMF_LosInfo, why)         == 20, "why at +20");
+
+    // The service's timings, named here because the contract depends on them.
+    inline constexpr std::uint32_t kLosFreshMs          = 1000;   // a verdict older than this reads kLos_Unknown
+    inline constexpr std::uint32_t kLosRefreshMs        = 250;    // a pair is re-measured at most this often
+    inline constexpr std::uint32_t kLosInterestMs       = 2000;   // a pair nobody asked for in this long is dropped
+    inline constexpr std::uint32_t kLosMaxPairsPerFrame = 8;      // pairs measured per frame, at most 3 rays each
+    inline constexpr std::uint32_t kLosMaxSyncPairsPerFrame = 8;  // SenseActor's own synchronous measurements per frame
+
+    // ── kIntent_TargetPin flags (param.ival, ABI v18) ──────────────────────────
+    // APPEND-ONLY: never renumber a bit; OR in a new bit at the next free position.
+    enum TargetPinFlags : std::uint32_t {
+        kTargetPin_None           = 0,
+        kTargetPin_OwnLineOfSight = 1u << 0,   // The pin ALSO PAUSES while Harbinger's own ray from the
+                                               //   actor to the pinned target is not VISIBLE (and at most
+                                               //   kLosFreshMs old): the engine's own pick stands for that
+                                               //   update, exactly like the existing pauses (no engine
+                                               //   target, target not in the group). It resumes when the
+                                               //   target is VISIBLE again. It never ends the pin. A bow or a
+                                               //   staff then shoots at what the actor can actually see,
+                                               //   instead of at a pinned foe behind a wall.
+                                               //   The first seat call registers the pair; until its first
+                                               //   verdict (a frame or two) the pin pauses.
+                                               //   REFUSED SYNCHRONOUSLY while the line-of-sight service is
+                                               //   not armed (see kLos_Unsupported). An APMF older than v18
+                                               //   ignores ival and pins with no test.
+    };
+
+    // ── AWARENESS (SenseActor) ─────────────────────────────────────────────────
+    // See Docs/APMF_API-REFERENCE.md#senseactor-senses ("does this actor sense that one": what each sense means)
+    //
+    // THREADING: SYNCHRONOUS, TRUE MAIN THREAD ONLY (the sight ray), exactly like the v11 space
+    // queries. Any other thread returns kQuery_NotMainThread and does nothing. Cost: at most 3
+    // rays (none when the pair's verdict is younger than kLosRefreshMs, or once this frame's
+    // kLosMaxSyncPairsPerFrame synchronous measurements are spent), plus member reads.
+    // It claims nothing, holds nothing and changes nothing in the game.
+
+    enum AwareSense : std::uint32_t {
+        kSense_None      = 0,
+        kSense_Sight     = 1u << 0,
+        kSense_Hearing   = 1u << 1,
+        kSense_Proximity = 1u << 2,
+        kSense_Engaged   = 1u << 3,
+    };
+
+    enum AwareFlags : std::uint32_t {   // which senses to SKIP (0 = evaluate all four)
+        kAware_None        = 0,
+        kAware_NoSight     = 1u << 0,   // no ray at all
+        kAware_NoHearing   = 1u << 1,
+        kAware_NoProximity = 1u << 2,
+        kAware_NoEngaged   = 1u << 3,
+    };
+
+    enum AwareDetail : std::uint32_t {
+        kAwareDetail_None             = 0,
+        kAwareDetail_HeardNoise       = 1u << 0,   // hearing came from a new engine noise
+        kAwareDetail_HeardCombat      = 1u << 1,   // hearing came from the target being in combat nearby
+        kAwareDetail_NearAnchor       = 1u << 2,   // the listener that heard it was the ANCHOR, not the viewer
+        kAwareDetail_EngagedAnchor    = 1u << 3,   // the target is fighting the ANCHOR (not the viewer)
+        kAwareDetail_SightOutOfRange  = 1u << 4,   // no ray: the target is farther than sightRange
+        kAwareDetail_SightUnavailable = 1u << 5,   // the ray could not be cast (sightWhy says why)
+        kAwareDetail_OtherSpace       = 1u << 6,   // the target is in another cell space: nothing sensed
+        kAwareDetail_NoiseBaseline    = 1u << 7,   // first look at this target's noise: baseline recorded
+        kAwareDetail_NoiseRouteOff    = 1u << 8,   // [Awareness] bHearNoise=0: the NOISE route is off
+        kAwareDetail_SightReused      = 1u << 9,   // the sight verdict was a measurement < kLosRefreshMs old
+        kAwareDetail_SightDeferred    = 1u << 10,  // this frame's kLosMaxSyncPairsPerFrame was spent: no ray; the
+                                                   //   stored verdict answered if fresh, else sight is UNKNOWN (not
+                                                   //   seen) and the pair is queued for the pump
+    };
+
+    inline constexpr float         kAwareDefaultSightRange     = 4096.0f;   // sightRange 0 => this
+    inline constexpr float         kAwareMaxSightRange         = 8192.0f;   // clamped (logged)
+    inline constexpr float         kAwareDefaultHearRadius     = 1536.0f;   // hearRadius 0 => this
+    inline constexpr float         kAwareMaxHearRadius         = 8192.0f;   // clamped (logged)
+    inline constexpr float         kAwareDefaultProximity      = 256.0f;    // proximityRadius 0 => this
+    inline constexpr float         kAwareMaxProximity          = 2048.0f;   // clamped (logged)
+    inline constexpr std::uint32_t kAwareNoiseWindowMs         = 3000;      // a noise older than this is not heard
+
+    // SenseActor input. EXACT LAYOUT (byte-shared): 32 bytes.
+    struct APMF_AwarenessQuery {
+        std::uint32_t size;             // +0   = sizeof(APMF_AwarenessQuery)
+        RE::FormID    viewer;           // +4   REQUIRED. The loaded, live actor who senses.
+        RE::FormID    target;           // +8   REQUIRED. The loaded actor sensed (not the viewer).
+        RE::FormID    anchor;           // +12  OPTIONAL second LISTENER (0 = none), e.g. the player the
+                                        //      viewer follows: hearing and engaged also count it. Not
+                                        //      loaded = treated as none. Sight and proximity ignore it.
+        float         sightRange;       // +16  0 => kAwareDefaultSightRange; clamped to kAwareMaxSightRange
+        float         hearRadius;       // +20  0 => kAwareDefaultHearRadius; clamped to kAwareMaxHearRadius
+        float         proximityRadius;  // +24  0 => kAwareDefaultProximity; clamped to kAwareMaxProximity
+        std::uint32_t flags;            // +28  AwareFlags (senses to skip)
+    };
+    static_assert(sizeof(APMF_AwarenessQuery) == 32, "APMF_AwarenessQuery is 32 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_AwarenessQuery, anchor)          == 12, "anchor at +12");
+    static_assert(offsetof(APMF_AwarenessQuery, proximityRadius) == 24, "proximityRadius at +24");
+    static_assert(offsetof(APMF_AwarenessQuery, flags)           == 28, "flags at +28");
+
+    // SenseActor output. EXACT LAYOUT (byte-shared): 48 bytes.
+    struct APMF_AwarenessResult {
+        std::uint32_t size;           // +0   the CALLER sets = sizeof(APMF_AwarenessResult)
+        std::uint32_t status;         // +4   a QueryStatus (the same value the call returns)
+        std::uint32_t senses;         // +8   AwareSense bits that fired (0 = not sensed)
+        std::uint32_t detail;         // +12  AwareDetail bits
+        float         distance;       // +16  viewer -> target, 3D game units (-1 when not computed)
+        std::uint32_t sightVerdict;   // +20  the ray's LosVerdict (kLos_Unknown when no ray was cast)
+        std::uint32_t sightSample;    // +24  the clear ray: 1 feet, 2 torso, 3 head; 0 = none
+        std::uint32_t sightWhy;       // +28  a LosWhy for an UNAVAILABLE / OTHER-WORLD ray, else 0
+        std::int32_t  noiseLevel;     // +32  the engine's level value of the target's newest noise; -1 = none
+        float         noiseAgeSec;    // +36  seconds since Harbinger saw that noise appear; -1 = unknown/none
+        float         noiseDistance;  // +40  from that noise to the nearer listener; -1 = none
+        RE::FormID    engagedWith;    // +44  the viewer or anchor the target is fighting; 0 = none
+    };
+    static_assert(sizeof(APMF_AwarenessResult) == 48, "APMF_AwarenessResult is 48 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_AwarenessResult, distance)    == 16, "distance at +16");
+    static_assert(offsetof(APMF_AwarenessResult, noiseLevel)  == 32, "noiseLevel at +32");
+    static_assert(offsetof(APMF_AwarenessResult, engagedWith) == 44, "engagedWith at +44");
+
+    // The v18 interface: APMF_API_v12's members verbatim (prefix EXTENSION; v13..v17 added no
+    // slot), then TWO appended slots. This header is BYTE-SHARED with MFO: the declaration
+    // below is authoritative and must be mirrored byte-identically on the client side.
+    //
+    // WHY A BUMP (INVARIANTS #14b): new function-pointer slots need an `abiVersion >= 18`
+    // test before a client may call them, and the two new flag bits need the same test.
+    struct APMF_API_v18 : APMF_API_v12 {
+        // Harbinger's own-ray line of sight from `viewer` to `target` (see THE OWN RAY). Returns
+        // a LosVerdict and, when `out` is non-null and `out->size` covers the v18 layout, fills
+        // `*out` (nothing is written into a shorter struct; the verdict is still returned).
+        //   ANY THREAD, LOCK-FREE, NEVER BLOCKS AND NEVER CASTS A RAY ITSELF: it reads the
+        //   newest stored measurement and marks the pair as ASKED FOR. The main thread
+        //   measures asked-for pairs (THREADING AND COST above), so the FIRST call for a pair
+        //   returns kLos_Unknown and a call a frame or two later has the verdict. Keep asking
+        //   while you need it: a pair nobody asks for in kLosInterestMs is dropped.
+        //   kLos_Unknown also means "older than kLosFreshMs" (ageMs still says how old).
+        //   A throw inside returns kLos_Unknown and writes nothing.
+        std::uint32_t (*GetLineOfSight)(RE::FormID viewer, RE::FormID target, APMF_LosInfo* out);
+
+        // Does `q->viewer` sense `q->target` (see AWARENESS above)? Returns a QueryStatus and
+        // writes it, the senses and their details into `*out`. MAIN THREAD ONLY.
+        //   kQuery_Ok           evaluated (senses may be 0: not sensed)
+        //   kQuery_NotMainThread called off the main thread; nothing done
+        //   kQuery_BadArgs      a null pointer, a size below the v18 layout, viewer or target 0,
+        //                       viewer == target, or a negative / non-finite range
+        //   kQuery_Unsupported  the service is not armed (see kLos_Unsupported)
+        //   kQuery_NoOrigin     the viewer is not a loaded, live actor, or the target is not a
+        //                       loaded actor
+        //   kQuery_Failed       an exception was caught
+        std::uint32_t (*SenseActor)(const APMF_AwarenessQuery* q, APMF_AwarenessResult* out);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v19: COMBAT APPROACH (kIntent_CombatApproach, ch.24)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // What ch.24 is doing for an actor, or why it stopped. APPEND-ONLY: never renumber.
+    //
+    // Unlike ch.19's leg, a ch.24 claim that ENDS is RELEASED BY HARBINGER (the ch.20 / ch.22
+    // model), so a lower-ranked approach claim on the same actor can take over. The state
+    // below stays readable after the end, until the actor's next ch.24 claim or a load.
+    enum CombatApproachState : std::uint32_t {
+        kApproachState_None        = 0,   // no ch.24 state for this actor since the last load (or ch.24
+                                          //   is not installed)
+        kApproachState_Waiting     = 1,   // the claim stands; the actor is not in combat yet (the bound
+                                          //   applies when combat starts)
+        kApproachState_Approaching = 2,   // the bound is in force and the engine reports the actor OUTSIDE
+                                          //   it (its own Return To Combat Area branch is selectable)
+        kApproachState_Holding     = 3,   // the bound is in force and the actor is inside it
+                                          //   (kApproach_Hold, or arrival not yet confirmed)
+        kApproachState_Yielded     = 4,   // NOT applied: a higher-priority combat area (a package's HOLD
+                                          //   POSITION) owns the actor's bound. Resumes when it goes.
+        kApproachState_Disabled    = 5,   // NOT applied: the engine disabled the actor's standard area
+                                          //   (the actor is fleeing or not high process). Resumes after.
+        kApproachState_Leashed     = 6,   // NOT applied: a ch.23 pursuit leash on the actor excludes every
+                                          //   point within R of X. Resumes when the geometry allows it.
+        kApproachState_Arrived     = 7,   // ENDED: the engine reports the actor inside R of X (no Hold flag)
+        kApproachState_TargetLost  = 8,   // ENDED: X is gone, dead, disabled, unloaded, in another cell
+                                          //   space, or was never a loaded reference
+        kApproachState_CombatEnded = 9,   // ENDED: the actor left combat after the bound was applied
+        kApproachState_EngineDropped = 10,// ENDED: the engine stopped updating the bound for 3 s while the
+                                          //   actor was in combat -- its own path back to X failed (it
+                                          //   deactivates the area) or its combat update stopped. Logged.
+        kApproachState_ActorGone   = 11,  // ENDED: the actor died, unloaded or lost its 3D
+        kApproachState_Released    = 12,  // the claim was released by the client, outranked, or dropped
+        kApproachState_Refused     = 13,  // ENDED: a Repoint declared target 0, the actor itself, or a radius
+                                          //   that is not a positive finite number (RequestEx refuses these
+                                          //   synchronously; a Repoint is only seen on the game thread)
+    };
+
+    // GetCombatApproachState output. EXACT LAYOUT (byte-shared): 48 bytes, every field 4 bytes.
+    // The CALLER sets `size` = sizeof(APMF_CombatApproachInfo) as compiled against its header.
+    // THE SIZE RULE (frozen, the APMF_TravelLegInfo rule): APMF fills the v19 fields when
+    // `size` >= kCombatApproachInfoV19Size (48, never changes) and writes nothing into a
+    // smaller struct; a field a later ABI appends is written only when it lies entirely inside
+    // the caller's `size`.
+    struct APMF_CombatApproachInfo {
+        std::uint32_t size;          // +0   the CALLER sets = sizeof(APMF_CombatApproachInfo)
+        std::uint32_t state;         // +4   a CombatApproachState (the same value the call returns)
+        RE::FormID    actor;         // +8   the actor asked about
+        RE::FormID    target;        // +12  X as declared (0 on kApproachState_None)
+        float         radius;        // +16  R as declared
+        float         distance;      // +20  actor -> X, 3D game units, at the last update (-1 = unknown)
+        std::uint32_t msInState;     // +24  milliseconds since this state began (saturates)
+        std::uint32_t seq;           // +28  one never-reset counter, changes on every state change of this
+                                     //        actor's approach (compare for inequality)
+        std::uint32_t ownerHandle;   // +32  the kIntent_CombatApproach claim handle this state belongs to
+        std::uint32_t flags;         // +36  the claim's CombatApproachFlags
+        std::uint32_t applied;       // +40  how many times the engine's own area update carried the bound
+                                     //        for this claim (0 = the seat never applied it: proof, not hope)
+        std::uint32_t engineInside;  // +44  the engine's last own "is the actor inside its area" answer for
+                                     //        this bound: 0 = not seen yet, 1 = outside, 2 = inside
+    };
+    inline constexpr std::uint32_t kCombatApproachInfoV19Size = 48;
+    static_assert(sizeof(APMF_CombatApproachInfo) == 48, "APMF_CombatApproachInfo is 48 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_CombatApproachInfo, distance)    == 20, "distance at +20");
+    static_assert(offsetof(APMF_CombatApproachInfo, ownerHandle) == 32, "ownerHandle at +32");
+    static_assert(offsetof(APMF_CombatApproachInfo, engineInside) == 44, "engineInside at +44");
+
+    // The v19 interface: APMF_API_v18's members verbatim (prefix EXTENSION), then ONE appended
+    // slot. This header is BYTE-SHARED with MFO: mirror it byte-identically.
+    //
+    // WHY A BUMP (INVARIANTS #14b): a new intent a client must not send to an older APMF, and a
+    // new function-pointer slot, both need an `abiVersion >= 19` test.
+    struct APMF_API_v19 : APMF_API_v18 {
+        // What ch.24 is doing with `actor`'s combat approach, or why it ended. Returns a
+        // CombatApproachState and, when `out` is non-null and `out->size` covers the v19
+        // layout, fills `*out`. Read-only; ANY THREAD (a copy under APMF's own lock, no game
+        // call). A throw inside returns kApproachState_None and writes nothing.
+        std::uint32_t (*GetCombatApproachState)(RE::FormID actor, APMF_CombatApproachInfo* out);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v22: EQUIP PREFERENCE (kIntent_EquipPreference, ch.26) -- weighting, phase 1
+    // ═════════════════════════════════════════════════════════════════════════════
+    // See Docs/APMF_API-REFERENCE.md#abi-v22-equip-preference (what a declaration does, never lifted, the escalation)
+    //
+    // THREADING. SetEquipPreference: any thread; copies `entries` synchronously and never retains
+    // the pointer; the declaration reaches the score seats on the next game frame. GetEquipPreferenceState:
+    // any thread.
+    enum EquipPrefFlags : std::uint32_t {
+        kEquipPref_None  = 0,
+        kEquipPref_Force = 1u << 0,   // escalation: also refuse non-preferred engine equips into the
+                                      //   preferred hands (ranked, see ESCALATION above)
+    };
+
+    // The step ("a step above the best competitor"): a relative margin above the best competitor,
+    // sized from the LoreRim 2026-10-12 scores (one item rose at most 3.94% between two passes), plus
+    // an absolute part that only makes a tie at a tiny score strict. Informational for a client.
+    inline constexpr float kEquipPrefStepRel = 0.05f;
+    inline constexpr float kEquipPrefStepAbs = 0.01f;
+
+    // The bound on one declaration; an overflow keeps the first kMaxEquipPreference entries (logged).
+    inline constexpr std::uint32_t kMaxEquipPreference = 8;
+
+    // One preferred item. EXACT LAYOUT (byte-shared with the client, pinned below):
+    //   +0  form      RE::FormID  the item's BASE FormID: a WEAP (a staff included), a shield (an
+    //                             ARMO with the shield biped slot) or a torch (LIGH). Anything else
+    //                             (a spell, body armor, ammo, an unknown form) is IGNORED, named
+    //                             once in that declaration's log line.
+    //   +4  slot      u8          an EquipSlot: kEquipSlot_Right / kEquipSlot_Left = that hand's
+    //                             engine item only; kEquipSlot_Default = either hand (a two-hander,
+    //                             a bow, or "whichever hand the engine picks")
+    //   +5  rank      u8          0 = most preferred. Of two declared items in one category the
+    //                             lower rank is lifted above the higher one; equal ranks are each
+    //                             lifted above every undeclared item (two hands: rank both 0).
+    //   +6  reserved  u8[2]       MUST be 0 (a later ABI may define them; a v22 APMF ignores them)
+    //   size 8, alignment 4.
+    struct APMF_EquipPrefEntry {
+        RE::FormID   form;
+        std::uint8_t slot;
+        std::uint8_t rank;
+        std::uint8_t reserved[2];
+    };
+    static_assert(sizeof(APMF_EquipPrefEntry) == 8,  "APMF_EquipPrefEntry is 8 bytes, byte-shared with clients");
+    static_assert(alignof(APMF_EquipPrefEntry) == 4, "APMF_EquipPrefEntry aligns to 4");
+    static_assert(offsetof(APMF_EquipPrefEntry, slot)     == 4, "slot at +4");
+    static_assert(offsetof(APMF_EquipPrefEntry, rank)     == 5, "rank at +5");
+    static_assert(offsetof(APMF_EquipPrefEntry, reserved) == 6, "reserved at +6");
+
+    // What ch.26 last did for an actor. APPEND-ONLY: never renumber.
+    enum EquipPrefState : std::uint32_t {
+        kEquipPrefState_None       = 0,   // no ch.26 state for this actor since the last load
+        kEquipPrefState_Declared   = 1,   // a winning claim; none of its items scored since the declaration
+                                          //   (not in combat, or the item is not in the engine's combat list)
+        kEquipPrefState_Lifted     = 2,   // the last scored preferred item was LIFTED above its best competitor
+        kEquipPrefState_Leading    = 3,   // the engine already scored it above every competitor: unchanged
+        kEquipPrefState_ZeroScore  = 4,   // the engine scored it 0 or less (unusable now): never lifted
+        kEquipPrefState_HandHeld   = 5,   // its hand is held by a live kIntent_Cast claim: not lifted
+        kEquipPrefState_Outranked  = 6,   // a source inside the score seat outranks the claim: not lifted
+        kEquipPrefState_Unreadable = 7,   // the engine's category list could not be read (logged): not lifted
+        kEquipPrefState_Released   = 8,   // no winning ch.26 claim on the actor any more
+    };
+
+    // GetEquipPreferenceState output. EXACT LAYOUT (byte-shared): 64 bytes, every field 4 bytes. The
+    // CALLER sets `size` = sizeof(APMF_EquipPrefInfo); APMF fills the v22 fields when `size` >=
+    // kEquipPrefInfoV22Size (64, never changes) and writes nothing into a smaller struct (the
+    // APMF_TravelLegInfo rule). The counters are per actor since the last load, saturating.
+    struct APMF_EquipPrefInfo {
+        std::uint32_t size;             // +0   the CALLER sets = sizeof(APMF_EquipPrefInfo)
+        std::uint32_t state;            // +4   an EquipPrefState (the same value the call returns)
+        RE::FormID    actor;            // +8   the actor asked about
+        std::uint32_t ownerHandle;      // +12  the winning kIntent_EquipPreference claim (0 = none)
+        std::uint32_t flags;            // +16  that claim's EquipPrefFlags
+        std::uint32_t entryCount;       // +20  that claim's published (type-checked) entries
+        RE::FormID    lastForm;         // +24  the preferred item `state` came from (0 = none yet)
+        std::uint32_t lastSlot;         // +28  the hand of that scoring, an EquipSlot (Default = not a hand item)
+        float         lastEngineScore;  // +32  the engine's own score for it
+        float         lastRivalScore;   // +36  the best competitor's score in its category (0 = none)
+        float         lastResultScore;  // +40  the score Harbinger returned to the engine
+        std::uint32_t msSinceScored;    // +44  milliseconds since that scoring (saturates; 0xFFFFFFFF = never)
+        std::uint32_t lifts;            // +48  scorings this actor's preferences were lifted
+        std::uint32_t withheld;         // +52  scorings not lifted because the claim was outranked
+        std::uint32_t forcedDenies;     // +56  engine equips refused under kEquipPref_Force
+        std::uint32_t forceAnomalies;   // +60  forced refusals NOT applied: the source outranked the claim
+    };
+    inline constexpr std::uint32_t kEquipPrefInfoV22Size = 64;
+    static_assert(sizeof(APMF_EquipPrefInfo) == 64, "APMF_EquipPrefInfo is 64 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_EquipPrefInfo, lastEngineScore) == 32, "lastEngineScore at +32");
+    static_assert(offsetof(APMF_EquipPrefInfo, lifts)           == 48, "lifts at +48");
+    static_assert(offsetof(APMF_EquipPrefInfo, forceAnomalies)  == 60, "forceAnomalies at +60");
+
+    // The v22 interface: APMF_API_v19's members verbatim (prefix EXTENSION; v20 and v21 added no
+    // slot), then TWO appended slots. BYTE-SHARED with MFO: mirror it byte-identically. A new intent
+    // and new slots: gate on `abiVersion >= 22` (INVARIANTS #14b).
+    struct APMF_API_v22 : APMF_API_v19 {
+        // DECLARE the preferred items for the actor behind a kIntent_EquipPreference claim (`handle`,
+        // as RequestEx/Request returned it). `entries` is READ AND COPIED synchronously (a stack array
+        // is fine); `count` is clamped to kMaxEquipPreference (logged). `count == 0` or `entries ==
+        // nullptr` CLEARS the declaration. DECLARE, DO NOT TICK: call it when the preference CHANGES.
+        // The declaration is type-checked (see APMF_EquipPrefEntry::form) and reaches the score seats
+        // on the next game frame. A declaration on a claim that does not own ch.26 is stored and
+        // applies the moment that claim wins (the ch.17 rule). It is DROPPED when its claim ends by
+        // any road (your Release, or Harbinger releasing or sweeping the claim). A handle that is not
+        // a live kIntent_EquipPreference claim of this session is a silent no-op. Any thread.
+        void (*SetEquipPreference)(Handle handle, const APMF_EquipPrefEntry* entries, std::uint32_t count);
+
+        // What ch.26 last did for `actor` (see EquipPrefState). Returns the state and, when `out` is
+        // non-null and `out->size` covers the v22 layout, fills `*out`. Read-only; ANY THREAD (a copy
+        // under APMF's own lock, no game call). A throw inside returns kEquipPrefState_None and writes
+        // nothing.
+        std::uint32_t (*GetEquipPreferenceState)(RE::FormID actor, APMF_EquipPrefInfo* out);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v24: IDLE STATE (kIntent_Idle with a form, ch.12)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // What became of a ch.12 claim's PlayIdle call, per claim HANDLE, so a client can tell an idle
+    // that PLAYED from one nobody can confirm, without a timer of its own. Harbinger judges NOT
+    // CONFIRMED after kIdleConfirmWindowMs of WORLD time (a menu pause does not count) at its
+    // ~250 ms Poll; read the state instead of racing that window. Only a claim filed with
+    // param.form != 0 (or re-pointed to one) has a state. The record stays while the claim is
+    // live, and for kIdleStateGraceMs of world time after its last change once it is not, so a
+    // client sees the terminal state (NotConfirmed, Refused) and not Unknown. A save load or a
+    // new game drops every record. Not saved. APPEND-ONLY: never renumber.
+    enum IdleState : std::uint32_t {
+        kIdleState_Unknown       = 0,  // no record: not a ch.12 claim with a form, a form-free (v1) claim, or
+                                       //   the grace ran out
+        kIdleState_Pending       = 1,  // filed or re-pointed; PlayIdle not called yet (not drained, not the
+                                       //   claim that owns ch.12 on the actor, or the play task has not run)
+        kIdleState_Accepted      = 2,  // PlayIdle returned true; no entry event yet, the window runs
+        kIdleState_Confirmed     = 3,  // PLAYED: the graph raised an entry event no other transition raises
+        kIdleState_ConfirmedWeak = 4,  // the graph raised an entry event OTHER transitions raise too (WEAK
+                                       //   evidence: it may be another state's event, REVIEW-BACKLOG APMF-B35)
+        kIdleState_NotConfirmed  = 5,  // no entry event within the window: Harbinger ENDS the claim
+        kIdleState_NoTransition  = 6,  // a complete graph walk found no transition on the idle's event: it
+                                       //   cannot play on this actor, Harbinger ENDS the claim
+        kIdleState_Refused       = 7,  // PlayIdle returned false (the idle's own conditions failed against the
+                                       //   actor / target, or the actor plays no idle now): Harbinger ENDS it
+        kIdleState_Unconfirmable = 8,  // PlayIdle returned true but no entry event can be resolved
+                                       //   (unconfirmableWhy): whether it played is UNKNOWN; the claim stays
+        kIdleState_NotPlayed     = 9,  // NO engine call: idle v2 is not available (a Repoint is not refused
+                                       //   synchronously), the form is not an IDLE, the target is not a loaded
+                                       //   reference, the actor is not loaded / dead / has no high process.
+                                       //   Harbinger ENDS the claim
+        kIdleState_Carried       = 10, // NOT EVIDENCE: this handle re-played the same idle while no IdleStop had
+                                       //   been seen since its previous play's entry, and this play has no fresh
+                                       //   entry event (one inside the window upgrades it to Confirmed). The claim stays. An
+                                       //   IdleStop since sets kIdleInfo_CarryEnded: the inherited idle ended
+    };
+
+    // Why a play is kIdleState_Unconfirmable (APMF_IdleStateInfo::unconfirmableWhy). APPEND-ONLY.
+    enum IdleUnconfirmable : std::uint32_t {
+        kIdleUnconf_None            = 0,
+        kIdleUnconf_ConfirmOff      = 1,  // [Idle] bIdleConfirm=0 in APMF.ini
+        kIdleUnconf_NotArmed        = 2,  // the self-check refused a vtable the graph read needs
+        kIdleUnconf_NoEntryEvents   = 3,  // the transition(s) on the idle's event raise no notify event, or the
+                                          //   idle names no animation event
+        kIdleUnconf_WalkIncomplete  = 4,  // no transition found, but the graph walk had a blind spot
+        kIdleUnconf_GraphUnreadable = 5,  // the actor has no readable behaviour graph
+        kIdleUnconf_IdSpaceBroken   = 6,  // event ids outside their graph's name table: nothing is judged
+    };
+
+    // How the claim behind a record ended (APMF_IdleStateInfo::endCause). APPEND-ONLY.
+    enum IdleEnd : std::uint32_t {
+        kIdleEnd_None       = 0,  // not ended
+        kIdleEnd_Harbinger  = 1,  // Harbinger released it; `state` says why
+        kIdleEnd_ActorDied  = 2,  // Harbinger released it: the actor died
+        kIdleEnd_Released   = 3,  // released by the client, or (owning ch.12) by the unload sweep or the
+                                  //   facet's last claim going
+        kIdleEnd_Superseded = 4,  // still live, but another claim owns ch.12 on the actor (or it was
+                                  //   re-pointed to form 0): its idle is no longer played. Winning back
+                                  //   plays again (a new play: the record restarts)
+        kIdleEnd_Gone       = 5,  // the claim stopped being live with no end Harbinger saw: released before
+                                  //   its play ran, or dropped (unload sweep) while not owning ch.12.
+                                  //   Stamped up to ~1.25 s after; the grace runs from the stamp
+    };
+
+    inline constexpr std::uint32_t kIdleInfo_Carried = 1u << 0;   // flags: this play was armed with a carry (same
+                                                                   //   handle, same idle, no IdleStop seen since)
+    inline constexpr std::uint32_t kIdleInfo_CarryEnded = 1u << 1; // flags: a carried play saw an IdleStop and no fresh entry
+    inline constexpr std::uint32_t kIdleConfirmWindowMs = 3000;    // informational: the NOT CONFIRMED window
+    inline constexpr std::uint32_t kIdleStateGraceMs    = 10000;   // informational: world ms a non-live record stays
+    inline constexpr std::uint32_t kIdleMsNone          = 0xFFFFFFFFu;
+
+    // GetIdleState output. EXACT LAYOUT (byte-shared): 60 bytes, every field 4 bytes. The CALLER
+    // sets `size` = sizeof(APMF_IdleStateInfo); APMF fills the v24 fields when `size` >=
+    // kIdleStateInfoV24Size (60, never changes) and writes nothing into a smaller struct (the
+    // APMF_TravelLegInfo rule). World ms = game time a menu pause does not advance.
+    struct APMF_IdleStateInfo {
+        std::uint32_t size;               // +0   the CALLER sets = sizeof(APMF_IdleStateInfo)
+        std::uint32_t state;              // +4   an IdleState (the same value the call returns)
+        std::uint32_t handle;             // +8   the handle asked about
+        RE::FormID    actor;              // +12  the claim's actor (0 on kIdleState_Unknown)
+        RE::FormID    idle;               // +16  the idle form of this play (param.form)
+        RE::FormID    target;             // +20  the target of this play (param.target, 0 = none)
+        std::uint32_t unconfirmableWhy;   // +24  an IdleUnconfirmable (kIdleUnconf_None unless Unconfirmable)
+        std::uint32_t endCause;           // +28  an IdleEnd
+        std::uint32_t flags;              // +32  kIdleInfo_* bits
+        std::uint32_t msSincePlay;        // +36  world ms since this play's PlayIdle call (kIdleMsNone = no call)
+        std::uint32_t msToEntry;          // +40  wall ms from the call to the entry event (kIdleMsNone = none;
+                                          //        0 when carried)
+        std::uint32_t msSinceEnd;         // +44  world ms since the end (kIdleMsNone = not ended)
+        std::uint32_t confirmWindowMs;    // +48  the window NOT CONFIRMED is judged on (kIdleConfirmWindowMs)
+        std::uint32_t plays;              // +52  PlayIdle calls made for this handle
+        std::uint32_t seq;                // +56  changes on every change of this record (compare for inequality)
+    };
+    inline constexpr std::uint32_t kIdleStateInfoV24Size = 60;
+    static_assert(sizeof(APMF_IdleStateInfo) == 60, "APMF_IdleStateInfo is 60 bytes, byte-shared with clients");
+    static_assert(offsetof(APMF_IdleStateInfo, unconfirmableWhy) == 24, "unconfirmableWhy at +24");
+    static_assert(offsetof(APMF_IdleStateInfo, msSincePlay)      == 36, "msSincePlay at +36");
+    static_assert(offsetof(APMF_IdleStateInfo, seq)              == 56, "seq at +56");
+
+    // The v24 interface: APMF_API_v22's members verbatim (prefix EXTENSION; v23 added no slot), then
+    // ONE appended slot. BYTE-SHARED with MFO: mirror it byte-identically. A new slot: gate on
+    // `abiVersion >= 24` (INVARIANTS #14b). An older APMF has no query: the claim's liveness
+    // (IsClaimLive) is all it offers, and a live claim there may be CONFIRMED or UNCONFIRMABLE.
+    struct APMF_API_v24 : APMF_API_v22 {
+        // What became of `handle`'s idle (see IdleState). Returns the state and, when `out` is
+        // non-null and `out->size` covers the v24 layout, fills `*out`. Read-only; ANY THREAD (a
+        // copy under APMF's own leaf lock, no game call). A state set on the game thread is seen
+        // at once; Harbinger judges it at its ~250 ms Poll. A throw inside returns
+        // kIdleState_Unknown and writes nothing.
+        std::uint32_t (*GetIdleState)(Handle handle, APMF_IdleStateInfo* out);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v26: SUBSTRATE STATE (kIntent_CombatSubstrate, ch.27)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Is an actor's combat a Harbinger SUBSTRATE (forced only so the animated cast road exists) and not
+    // a fight? marth 2026-10-13: substrate combat is NOT combat, for any client. Real combat during the
+    // window flips the actor to kSubstrateState_Real at once. APPEND-ONLY: never renumber.
+    // See Docs/APMF_API-REFERENCE.md#abi-v26-substrate-state
+    enum SubstrateState : std::uint32_t {
+        kSubstrateState_None   = 0,  // no substrate (its combat, if any, is real); also any APMF < v26
+        kSubstrateState_Held   = 1,  // a live holder, no real-combat trigger: its combat is SUBSTRATE-ONLY
+        kSubstrateState_Real   = 2,  // a holder whose real-combat trigger fired: its combat COUNTS
+        kSubstrateState_Anchor = 3,  // the actor IS Harbinger's anchor (APMF.esl 0x80A): never a foe or target
+    };
+
+    // The v26 interface: APMF_API_v24's members verbatim (prefix EXTENSION; v25 added no slot), then
+    // ONE appended slot. BYTE-SHARED with MFO: mirror it byte-identically. Gate on `abiVersion >= 26`
+    // (INVARIANTS #14b); an older APMF has no query (treat every actor as kSubstrateState_None).
+    struct APMF_API_v26 : APMF_API_v24 {
+        // `actor`'s SubstrateState. Read-only; ANY THREAD (lock-free, no game call, no lock); cheap
+        // per actor per tick. A throw inside returns kSubstrateState_None.
+        std::uint32_t (*GetSubstrateState)(RE::FormID actor);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v27: SUBSTRATE AVAILABILITY (kIntent_CombatSubstrate, ch.27)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Can this install open a combat substrate at all? It tells "the capability is ABSENT here" (a
+    // declared degrade the client may plan for) from "this one open was refused" (a failure the client
+    // logs and never falls back from, principle 7). See Docs/APMF_API-REFERENCE.md#abi-v27-substrate-available
+    //
+    // The v27 interface: APMF_API_v26's members verbatim (prefix EXTENSION), then ONE appended slot.
+    // BYTE-SHARED with MFO: mirror it byte-identically. Gate on `abiVersion >= 27` (INVARIANTS #14b); an
+    // older APMF has no query (a v23..v26 APMF may still accept a kIntent_CombatSubstrate claim).
+    struct APMF_API_v27 : APMF_API_v26 {
+        // TRUE only when the substrate is INSTALLED and usable on this runtime: APMF.ini's
+        // [CombatSubstrate] bCombatSubstrate is not 0, the runtime is one it runs on (exactly 1.6.1170
+        // or 1.5.97, not VR), every seat it rides is installed, every address row it calls verified, and
+        // its APMF.esl records resolved. Exactly when a kIntent_CombatSubstrate request is NOT refused for
+        // being unavailable. FALSE before kDataLoaded and after any refusal (the reason is logged once in
+        // APMF.log, "[substrate] combat substrate NOT installed"). Read-only, ANY THREAD (one atomic load,
+        // no game call), may change once at kDataLoaded and never afterwards. A throw inside returns false.
+        bool (*IsSubstrateAvailable)(void);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v28: PLACE (kIntent_Place)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // A ONE-SHOT: put an actor beside a reference, or at a point in an interior cell, with the engine's own
+    // move (TESObjectREFR::MoveTo_Impl, the body of Papyrus ObjectReference.MoveTo), ONCE, on the game thread.
+    // It works on an UNLOADED persistent actor (that is what it is for: an off-screen actor "found" where the
+    // client put it). It is never a claim, holds no facet and switches nothing on. RequestEx(actor,
+    // kIntent_Place, basis, &param) returns a handle that only labels the request; read its outcome with
+    // GetPlaceState. See Docs/APMF_API-REFERENCE.md#abi-v28-place and Docs/FACETS.md "Place".
+    //
+    // ARBITRATION. A placement is REFUSED (kPlaceWhy_TravelOwned / kPlaceWhy_HoldOwned) when the winning
+    // kIntent_Travel (ch.19) or kIntent_MovementBlock (ch.1) claim on the actor belongs to ANOTHER client (or to
+    // no client Harbinger can name). Your OWN winning claim does not block it, and Harbinger does not end it: a
+    // live travel leg of yours carries on from the new spot, a hold of yours holds him there.
+
+    // kIntent_Place's param.ival. APPEND-ONLY: never renumber; an unknown bit is REFUSED at the call.
+    enum PlaceFlags : std::uint32_t {
+        kPlace_OnlyIfUnloaded        = 1u << 0,  // REFUSE (kPlaceWhy_ActorLoaded) when the actor has 3D or stands in an
+                                                 //   attached INTERIOR cell (outdoors: 3D only): no visible pop
+        kPlace_RefuseIfPlayerPresent = 1u << 1,  // REFUSE (kPlaceWhy_PlayerPresent) when the player's cell is the actor's
+                                                 //   current cell, or: an INTERIOR destination cell is the player's cell;
+                                                 //   an EXTERIOR destination is LOADED (its cell attached, or the
+                                                 //   destination reference has 3D), i.e. inside the player's loaded grid
+        kPlace_SetYaw                = 1u << 2,  // face param.fval (radians, world Z rotation); without it the actor
+                                                 //   keeps its own heading
+        kPlace_All                   = 0x7u,
+    };
+
+    // What became of a placement, per handle. APPEND-ONLY: never renumber.
+    enum PlaceState : std::uint32_t {
+        kPlaceState_Unknown = 0,  // no record: not a placement handle, the grace ran out, or a load / new game
+                                  //   dropped it (a placement still queued at a load is dropped, never run)
+        kPlaceState_Queued  = 1,  // accepted at the call; the game thread has not run it yet
+        kPlaceState_Placed  = 2,  // the engine move ran and the actor's position reads back at the point
+        kPlaceState_Refused = 3,  // a game-thread check refused it (APMF_PlaceStateInfo::why); nothing was moved
+        kPlaceState_Failed  = 4,  // the engine move ran but the position did NOT read back at the point, or an
+                                  //   INTERIOR placement reads back in another cell (why = kPlaceWhy_NotMoved),
+                                  //   or the step threw (kPlaceWhy_Error)
+    };
+
+    // Why a placement was refused or failed (APMF_PlaceStateInfo::why). APPEND-ONLY.
+    enum PlaceWhy : std::uint32_t {
+        kPlaceWhy_None          = 0,
+        kPlaceWhy_ActorGone     = 1,   // the actor FormID is not an actor in memory
+        kPlaceWhy_DestGone      = 2,   // the destination FormID resolves to nothing
+        kPlaceWhy_DestInvalid   = 3,   // neither a reference nor a cell, a deleted reference, one in no cell, or the
+                                       //   actor itself
+        kPlaceWhy_DestExterior  = 4,   // an EXTERIOR cell: name a reference in that worldspace and an offset instead
+        kPlaceWhy_ActorLoaded   = 5,   // kPlace_OnlyIfUnloaded and the actor is loaded
+        kPlaceWhy_PlayerPresent = 6,   // kPlace_RefuseIfPlayerPresent and the player is there (see the flag)
+        kPlaceWhy_TravelOwned   = 7,   // another client's kIntent_Travel claim owns the actor (blocker = its handle)
+        kPlaceWhy_HoldOwned     = 8,   // another client's kIntent_MovementBlock claim owns the actor (blocker = its handle)
+        kPlaceWhy_NotMoved      = 9,   // kPlaceState_Failed: the call returned, the position (or, for an interior
+                                       //   destination, the cell) did not read back as sent
+        kPlaceWhy_Error         = 10,  // kPlaceState_Failed: an exception inside Harbinger's game-thread step
+    };
+
+    inline constexpr std::uint32_t kPlaceInfo_WasLoaded   = 1u << 0;  // info: the actor was loaded when it was moved
+    inline constexpr std::uint32_t kPlaceInfo_FromCell    = 1u << 1;  // info: the destination was a CELL (else a reference)
+    inline constexpr std::uint32_t kPlaceInfo_CellDiffers = 1u << 2;  // info: after an EXTERIOR move the actor's parent cell
+                                                                      //   is not the cell handed to the engine (logged;
+                                                                      //   an interior mismatch is kPlaceState_Failed)
+    inline constexpr std::uint32_t kPlaceStateGraceMs     = 30000;    // informational: a finished record stays until it has
+                                                                      //   been read once OR this many wall ms, whichever
+                                                                      //   is LATER (the 128-record cap can still evict it)
+
+    // GetPlaceState output. EXACT LAYOUT (byte-shared): 64 bytes, every field 4 bytes. The CALLER sets `size` =
+    // sizeof(APMF_PlaceStateInfo); APMF fills the v28 fields when `size` >= kPlaceStateInfoV28Size (64, never
+    // changes) and writes nothing into a smaller struct (the APMF_TravelLegInfo rule).
+    struct APMF_PlaceStateInfo {
+        std::uint32_t size;           // +0   the CALLER sets = sizeof(APMF_PlaceStateInfo)
+        std::uint32_t state;          // +4   a PlaceState (the same value the call returns)
+        std::uint32_t handle;         // +8   the handle asked about
+        RE::FormID    actor;          // +12  the actor (0 on kPlaceState_Unknown)
+        RE::FormID    dest;           // +16  the destination (param.form)
+        std::uint32_t why;            // +20  a PlaceWhy (kPlaceWhy_None unless Refused / Failed)
+        std::uint32_t blocker;        // +24  the owning claim's handle on TravelOwned / HoldOwned, else 0
+        RE::FormID    cell;           // +28  Placed / Failed: the actor's parent cell read back after the move (0 = none)
+        float         x;              // +32  the world point the actor was sent to (0 until the game thread resolved it)
+        float         y;              // +36
+        float         z;              // +40
+        float         yaw;            // +44  the world Z rotation handed to the engine (radians)
+        std::uint32_t flags;          // +48  the request's PlaceFlags
+        std::uint32_t info;           // +52  kPlaceInfo_* bits
+        std::uint32_t msSinceChange;  // +56  wall ms since this record last changed
+        std::uint32_t seq;            // +60  changes on every change of this record (compare for inequality)
+    };
+    inline constexpr std::uint32_t kPlaceStateInfoV28Size = 64;
+    static_assert(sizeof(APMF_PlaceStateInfo) == 64, "APMF_PlaceStateInfo is 64 bytes, byte-shared with clients");
+    static_assert(alignof(APMF_PlaceStateInfo) == 4, "APMF_PlaceStateInfo aligns to 4");
+    static_assert(offsetof(APMF_PlaceStateInfo, why)           == 20, "why at +20");
+    static_assert(offsetof(APMF_PlaceStateInfo, cell)          == 28, "cell at +28");
+    static_assert(offsetof(APMF_PlaceStateInfo, x)             == 32, "x at +32");
+    static_assert(offsetof(APMF_PlaceStateInfo, flags)         == 48, "flags at +48");
+    static_assert(offsetof(APMF_PlaceStateInfo, msSinceChange) == 56, "msSinceChange at +56");
+    static_assert(offsetof(APMF_PlaceStateInfo, seq)           == 60, "seq at +60");
+
+    // The v28 interface: APMF_API_v27's members verbatim (prefix EXTENSION), then ONE appended slot.
+    // BYTE-SHARED with MFO: mirror it byte-identically. Gate on `abiVersion >= 28` (INVARIANTS #14b) before
+    // asking for kIntent_Place or calling the slot: an older APMF has no channel for intent 28 and REFUSES the
+    // request ("no channel serves intent 28").
+    struct APMF_API_v28 : APMF_API_v27 {
+        // What became of placement `handle` (see PlaceState). Returns the state and, when `out` is non-null and
+        // `out->size` covers the v28 layout, fills `*out`. Read-only; ANY THREAD (a copy under APMF's own leaf
+        // lock, no game call). A throw inside returns kPlaceState_Unknown and writes nothing.
+        std::uint32_t (*GetPlaceState)(Handle handle, APMF_PlaceStateInfo* out);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v29: CLIENT FACET PRIORITY (the Harbinger page / APMF_Sources.ini)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // What priority does the CALLING client have on a facet? The player sets it per (source, facet) on the
+    // Harbinger SKSE Menu page or in Data/SKSE/Plugins/APMF_Sources.ini, 0..100, and 0 = OFF: a claim of that
+    // client never wins on that facet, so Harbinger enforces none of it there. A client reads it to know what
+    // it cannot do (marth 2026-10-25: Equip at 0 means the follower will not wear an upgrade, so the client
+    // can treat it as sellable). The CALLER is the client DLL that makes the call, named the same way a claim
+    // names its client (the calling module, `_ReturnAddress()`): a client can only read its OWN priorities.
+    // See Docs/APMF_API-REFERENCE.md#abi-v29-client-facet-priority
+    //
+    // The facets, numbered as the Harbinger page and APMF_Sources.ini sections. APPEND-ONLY: never renumber.
+    enum ClientFacet : std::uint32_t {
+        kFacet_Target       = 0,  // [Target]       ch.6 / ch.20: which actor an NPC fights
+        kFacet_Detection    = 1,  // [Detection]    the detection value
+        kFacet_Package      = 2,  // [Package]      ch.9 / ch.19: the running AI package
+        kFacet_EquipWeapon  = 3,  // [EquipWeapon]  weapons, shields, torches, ammo
+        kFacet_CombatAction = 4,  // [CombatAction] ch.7 / ch.23: the combat behaviour tree leaves
+        kFacet_Cast         = 5,  // [Cast]         ch.8: cast choice and execution
+        kFacet_Combat       = 6,  // [Combat]       ch.21 / 22 / 24: entry, re-entry, approach
+        kFacet_Core         = 7,  // [Core]         the spine seats
+        kFacet_ActorValue   = 8,  // [ActorValue]   gait / disposition actor values
+        kFacet_EquipArmor   = 9,  // [EquipArmor]   armor-only items
+    };
+    inline constexpr std::int32_t kFacetPriorityUnknown = -1;   // GetClientFacetPriority: not a facet this APMF knows
+
+    // The v29 interface: APMF_API_v28's members verbatim (prefix EXTENSION), then ONE appended slot.
+    // BYTE-SHARED with MFO: mirror it byte-identically. Gate on `abiVersion >= 29` (INVARIANTS #14b); an older
+    // APMF has no query (the client cannot tell, and behaves as if its priority were not 0).
+    struct APMF_API_v29 : APMF_API_v28 {
+        // The calling client's priority on `facet` (a ClientFacet), 0..100; 0 = OFF. A client that has not
+        // filed a claim yet gets the priority its first claim will rank at (APMF_Sources.ini's value for it,
+        // else its [Defaults] client value, 50 out of the box). kFacetPriorityUnknown for a facet value this
+        // APMF does not know.
+        // Read-only, ANY THREAD (atomic loads and a module-cache lookup under a leaf lock, no game call, no
+        // registration). A player change on the page is seen once Harbinger applies it (its main-thread pump,
+        // the next frame). A throw inside returns kFacetPriorityUnknown.
+        std::int32_t (*GetClientFacetPriority)(std::uint32_t facet);
+    };
+
+    // ABI v30 (kTravel_CrossCells, a TravelFlags bit read through the EXISTING RequestEx / Repoint) adds NO slot:
+    // the interface object stays an APMF_API_v29 and `abiVersion` reports 30.
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ABI v31: CLAIM END REASON (ch.20 kIntent_TargetPin, ch.21 kIntent_CombatEntry)
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Why did Harbinger end a claim? A client that sees IsClaimLive go false reads this to tell an engagement
+    // Harbinger dropped as NOT ENGAGED (out of the engage range, or no path progress: the actor's combat is
+    // ended too, marth 2026-10-27, so the client gives that target up) from one the engine ended or refused.
+    // Only the ch.20 and ch.21 claims Harbinger ends ITSELF get a reason. A claim the client released, one an
+    // unload or a load dropped, and every other intent read kClaimEnd_None. A save load or a new game drops
+    // every record. Not saved. APPEND-ONLY: never renumber.
+    // See Docs/APMF_API-REFERENCE.md#abi-v31-claim-end-reason
+    enum ClaimEndReason : std::uint32_t {
+        kClaimEnd_None           = 0,   // no record: still live, released by its client, dropped by an unload or a
+                                        //   load, not a ch.20 / ch.21 claim, or not a handle this APMF issued
+        kClaimEnd_NotEngaged     = 1,   // held engagement: the target is beyond the ch.21 engage range (param.fval)
+                                        //   and not attacking the party. The actor's combat is ended (ranked)
+        kClaimEnd_NoPathProgress = 2,   // held engagement: 20 s of world time with no path progress toward the
+                                        //   target outside reach. Counts as NOT ENGAGED: the combat is ended (ranked)
+        kClaimEnd_ArrivedIdle    = 3,   // held engagement: 20 s within reach with no attack or cast on the target
+        kClaimEnd_CombatEnded    = 4,   // ch.21: the engine ended the actor's fight
+        kClaimEnd_EntryRefused   = 5,   // ch.21: Actor::StartCombat returned false (the engine refused the entry)
+        kClaimEnd_NotAttempted   = 6,   // ch.21: no engine call, the actor or the target cannot be used (form 0, the
+                                        //   actor itself, not an actor, not loaded, dead, no AI process)
+        kClaimEnd_OwnerDead      = 7,   // the claim's actor died
+        kClaimEnd_TargetDead     = 8,   // the target died
+        kClaimEnd_TargetGone     = 9,   // the target is disabled, unloaded or no longer resolves
+        kClaimEnd_TargetLost     = 10,  // ch.20, only with [EngagementHold] bEngagementHold=0 or no knowledge seats:
+                                        //   the engine lost the target
+        kClaimEnd_NotATarget     = 11,  // ch.20: the target left the actor's combat group targets after it was one
+    };
+
+    // The v31 interface: APMF_API_v29's members verbatim (prefix EXTENSION; v30 added no slot), then ONE
+    // appended slot. BYTE-SHARED with MFO: mirror it byte-identically. Gate on `abiVersion >= 31` (INVARIANTS
+    // #14b); an older APMF has no query (IsClaimLive going false is all it says).
+    struct APMF_API_v31 : APMF_API_v29 {
+        // Why Harbinger ended `handle`'s claim (see ClaimEndReason). Read-only; ANY THREAD (a copy under APMF's
+        // own leaf lock, no game call). The reason is recorded on the game thread in the same step that queues
+        // the claim's release, so it can be readable a frame before IsClaimLive goes false. A throw inside
+        // returns kClaimEnd_None.
+        std::uint32_t (*GetClaimEndReason)(Handle handle);
+    };
+
+    // Function-pointer type for GetProcAddress(kGetInterfaceExport). Returns the
+    // base type; a client that asked for ABI >= N checks p->abiVersion and casts up
+    // to APMF_API_vN* (all revisions share v1's identical initial sequence).
+    using GetInterface_t = const APMF_API_v1* (*)(std::uint32_t abiVersion);
+
+}

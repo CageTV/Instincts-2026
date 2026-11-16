@@ -1,0 +1,8 @@
+FormKey: 000804:BeastHarmony.esp
+EditorID: BH_PetDone_Fox
+Category: 0172A1:Skyrim.esm
+OutputModel: 07F80C:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\fox_yip.wav
+Type: Standard
+Priority: 128

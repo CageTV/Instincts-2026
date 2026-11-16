@@ -1,0 +1,35 @@
+/*
+ * Beast Harmony
+ * Copyright (c) 2026 CageTV
+ *
+ * Released under the MIT License; see LICENSE.txt.
+ */
+#pragma once
+
+namespace Jobs
+{
+	// Pet jobs, built on Harbinger (APMF). Gather: a gatherer or scavenger pet walks to up to `maxItems` unharvested plants within `range`, picks them
+	// (they go into its own inventory), stays away until `gameHours` game hours have passed, then walks back to the player. Combat, death or a lost
+	// destination ends the trip. For now it starts with the jobs key while the crosshair is on the pet; the dialogue entry comes later.
+	void Init();
+
+	// Sends one gatherer / scavenger pet out to gather (the menu entry). Returns true if it set out. Game thread only.
+	bool Gather(RE::Actor* a_pet);
+
+	// true for a pet that has the gather job: gatherers and scavengers (plants) and bears (fishing)
+	bool CanGather(RE::Actor* a_pet);
+
+	// the menu text of that job: "Go fishing" for a bear, "Gather what you can find" for the rest
+	const char* GatherLabel(RE::Actor* a_pet);
+
+	// Hunt: wolves (small game), big cats (small and medium game) and bears (any game up to a cap) go and kill wild animals nobody owns, take what the
+	// carcass holds into their own inventory and walk back to the player. Sets the pet out; returns true if it went. Game thread only.
+	bool Hunt(RE::Actor* a_pet);
+
+	// true for a pet that can hunt (fighter class and a species with a prey size)
+	bool CanHunt(RE::Actor* a_pet);
+
+	// Attack my target: every tamed fighter pet near the player goes for the creature under the crosshair (key in config jobs.keyAttack).
+	// Refuses followers, essential or protected actors and anyone who is not hostile to the player or a wild animal. Game thread only.
+	void AttackTarget();
+}

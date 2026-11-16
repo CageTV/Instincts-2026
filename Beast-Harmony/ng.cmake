@@ -1,0 +1,6 @@
+# BeastHarmony.dll on alandtse's CommonLibSSE-NG; included by E:/WorkSpace/ng-build/CMakeLists.txt (see ng_plugin there)
+ng_plugin(TARGET BeastHarmony NAME BeastHarmony VERSION 0.1.0 AUTHOR "CageTV" ROOT "${CMAKE_CURRENT_LIST_DIR}"
+    SOURCES src/main.cpp src/Config.cpp src/Subdue.cpp src/Pets.cpp src/BoxSkip.cpp src/Diet.cpp src/HudFilter.cpp src/Spike.cpp src/Jobs.cpp src/Look.cpp src/PetMenu.cpp src/MenuPage.cpp src/Widget.cpp
+    INCLUDES "${CMAKE_CURRENT_LIST_DIR}/src" "E:/WorkSpace/ng-build/deps/In-Game_Patcher/include"
+    PCH "${CMAKE_CURRENT_LIST_DIR}/src/PCH.h"
+    LIBS nlohmann_json::nlohmann_json)
