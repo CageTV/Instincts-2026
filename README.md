@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/Instincts-The-BeastMaster-logo.png" alt="Instincts: The BeastMaster" width="520"></p>
+
 # Instincts 2026
 
 Fixes and a native companion for **Instincts - Animal Taming in Skyrim** by Kheree (Nexus 63224), whose permissions allow modification.
