@@ -8,7 +8,7 @@ Inputs (all must exist; the script stops otherwise):
 """
 import os, sys, zipfile, hashlib
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 NAME = "Instincts - The BeastMaster"
 REPO = r"E:\WorkSpace\Instincts-2026"
 OUT = os.path.join(REPO, "release", f"{NAME} {VERSION}.zip")

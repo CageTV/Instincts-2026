@@ -1,4 +1,4 @@
-Instincts - The BeastMaster 0.2.0
+Instincts - The BeastMaster 0.2.1
 
 Find, tame, feed and train the animals of Skyrim. A continuation of "Instincts - Animal Taming in Skyrim" by Kheree (Mumirnik, Nexus 63224), which is no
 longer maintained. This mod contains everything in ONE plugin: Kheree's original Instincts 1.1.6 content, our fixes, and Beast Harmony (a native SKSE

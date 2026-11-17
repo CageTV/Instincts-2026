@@ -60,11 +60,19 @@ namespace BoxSkip
 			auto&                                        queue = RE::MessageBoxMenu::GetQueue();
 			a_queueSize = queue.size();
 			for (auto* d : queue) {
-				if (!d || d->buttonText.empty() || !IsActivateChoiceCallback(d->callback.get())) {
+				if (!d || d->buttonText.empty()) {
 					continue;
 				}
 				const char* first = d->buttonText[0].c_str();
 				a_firstLabel = first ? first : "";
+				static int diag = 0;
+				if (diag < 30) {
+					++diag;
+					SKSE::log::info("queued box: {} button(s), first '{}', second '{}', activation-choice callback {}", d->buttonText.size(), a_firstLabel,
+						d->buttonText.size() > 1 ? d->buttonText[1].c_str() : "", IsActivateChoiceCallback(d->callback.get()) ? "yes" : "no");
+				}
+				// identified by its first button (the label is unique to Instincts' taming entry); the callback type is only logged, because another mod
+				// that wraps message boxes can change it
 				if (a_firstLabel == kLabel) {
 					found = d->callback;
 					// The engine ALSO runs the box's callback when the box is closed, and the choice list is gone after our own run: that second run
@@ -82,7 +90,7 @@ namespace BoxSkip
 		{
 			RE::BSSpinLockGuard lock(RE::MessageBoxMenu::GetQueueLock());
 			for (auto* d : RE::MessageBoxMenu::GetQueue()) {
-				if (!d || d->buttonText.size() < 2 || !IsActivateChoiceCallback(d->callback.get())) {
+				if (!d || d->buttonText.size() < 2) {
 					continue;
 				}
 				const char* first = d->buttonText[0].c_str();
@@ -109,6 +117,9 @@ namespace BoxSkip
 					if (logged < 40) {
 						++logged;
 						SKSE::log::info("message box shown: {} box(es) queued, activation choice '{}' {}", queued, label, cb ? "FOUND" : "not found");
+					}
+					if (!cb) {
+						RenameSecondButton();  // skip could not take the box: at least give the player the way out
 					}
 				}
 			} catch (const std::exception& e) {

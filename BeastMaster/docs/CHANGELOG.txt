@@ -1,3 +1,9 @@
+0.2.1
+  - Taming prompt: the "Attempt to Tame" box is now recognised by its button label (not by the engine's internal callback type, which another mod that wraps message
+    boxes can change). The second button, which used to repeat "Attempt to Tame", is always renamed "Cancel", also when the box skip could not take the box.
+    With activationBox.skip = false in SKSE/Plugins/BeastHarmony/config.json the box always stays open with Attempt to Tame / Cancel.
+  - BeastHarmony.log lists every queued message box (buttons and callback type) for the first 30 boxes, to find out why a box was not taken.
+
 0.2.0 - first release as Instincts - The BeastMaster
   - One plugin instead of three: Instincts 1.1.6 + Instincts - Fixes 0.1.0 + Beast Harmony 0.1.0 records merged into "Instincts - The BeastMaster.esp".
   - Original FormIDs kept; Beast Harmony records live at 000800-00080B.
