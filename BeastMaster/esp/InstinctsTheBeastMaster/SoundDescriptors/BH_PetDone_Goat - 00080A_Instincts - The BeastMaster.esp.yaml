@@ -1,0 +1,8 @@
+FormKey: 00080A:Instincts - The BeastMaster.esp
+EditorID: BH_PetDone_Goat
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\goat_bleat.wav
+OutputModel: 07F80C:Skyrim.esm
+Priority: 128

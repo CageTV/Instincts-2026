@@ -1,0 +1,9 @@
+FormKey: 00AA1B:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Faction_IsFollowing
+Name:
+  TargetLanguage: English
+  Value: Is Tamed Pet
+CrimeValues:
+  Arrest: True
+  AttackOnSight: True
+VendorValues: {}

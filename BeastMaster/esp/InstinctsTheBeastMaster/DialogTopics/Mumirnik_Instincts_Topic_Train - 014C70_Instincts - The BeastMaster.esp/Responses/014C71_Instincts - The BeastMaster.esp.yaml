@@ -1,0 +1,50 @@
+FormKey: 014C71:Instincts - The BeastMaster.esp
+VirtualMachineAdapter:
+  Scripts:
+  - Name: TIF__05014C71
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainFurniture
+      Object: 00FB3F:Instincts - The BeastMaster.esp
+  ScriptFragments:
+    MutagenObjectType: ScriptFragments
+    FileName: TIF__05014C71
+    OnEnd:
+      ExtraBindDataVersion: 1
+      ScriptName: TIF__05014C71
+      FragmentName: Fragment_0
+Flags:
+  Flags:
+  - InvisibleContinue
+  - NoLipFile
+PreviousDialog: Null
+FavorLevel: None
+LinkTo:
+- 0519B7:Instincts - The BeastMaster.esp
+Responses:
+- EmotionValue: 50
+  ResponseNumber: 1
+  Unknown2: 0x000000
+  Sound: 04C861:Instincts - The BeastMaster.esp
+  Unknown3: 0x000000
+  Text:
+    TargetLanguage: English
+    Value: (grunt)
+  ScriptNotes: ''
+  Edits: ''
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInListConditionData
+    FormList: 033335:Instincts - The BeastMaster.esp
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: GetActorValueConditionData
+    ActorValue: SmithingPowerModifier
+  ComparisonValue: 1

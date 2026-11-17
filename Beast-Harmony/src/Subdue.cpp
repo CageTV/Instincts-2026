@@ -16,8 +16,8 @@ namespace Subdue
 {
 	namespace
 	{
-		constexpr auto kInstincts = "Instincts - Animal Taming in Skyrim.esp"sv;
-		constexpr auto kOwn = "BeastHarmony.esp"sv;
+		constexpr auto kInstincts = "Instincts - The BeastMaster.esp"sv;
+		constexpr auto kOwn = "Instincts - The BeastMaster.esp"sv;
 
 		struct Forms
 		{
@@ -317,9 +317,9 @@ namespace Subdue
 			}
 		}
 		F.ok = F.spell && F.paralysis && F.rolled && F.originalRaces && F.powers;
-		SKSE::log::info("Beast Harmony: BeastHarmony.esp {}, Instincts lists {}", (F.spell && F.paralysis && F.rolled) ? "found" : "NOT FOUND", (F.originalRaces && F.powers) ? "found" : "NOT FOUND");
+		SKSE::log::info("Beast Harmony: records {}, Instincts lists {}", (F.spell && F.paralysis && F.rolled) ? "found" : "NOT FOUND", (F.originalRaces && F.powers) ? "found" : "NOT FOUND");
 		if (!F.ok) {
-			SKSE::log::warn("the knock-out rule is off (needs BeastHarmony.esp and Instincts - Animal Taming in Skyrim.esp)");
+			SKSE::log::warn("the knock-out rule is off (needs Instincts - The BeastMaster.esp)");
 			return;
 		}
 		RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESHitEvent>(&hitSink);

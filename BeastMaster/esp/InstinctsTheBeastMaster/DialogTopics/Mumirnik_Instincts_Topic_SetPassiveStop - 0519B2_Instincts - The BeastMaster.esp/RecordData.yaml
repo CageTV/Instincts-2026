@@ -1,0 +1,9 @@
+FormKey: 0519B2:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_SetPassiveStop
+Name:
+  TargetLanguage: English
+  Value: I need you to fight with me.
+Priority: 85
+Branch: 0519B1:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

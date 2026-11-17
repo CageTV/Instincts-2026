@@ -1,0 +1,23 @@
+FormKey: 09D9D3:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_DefensiveBonusesABILITY
+Name:
+  TargetLanguage: English
+  Value: Defensive Bonuses
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- NoDuration
+- NoArea
+- HideInUI
+SecondActorValueWeight: 0.125
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: DamageResist
+  Type: DualValueModifier
+SecondActorValue: ResistMagic
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

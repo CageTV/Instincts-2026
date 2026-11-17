@@ -1,0 +1,9 @@
+FormKey: 014C7A:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_Stats
+Name:
+  TargetLanguage: English
+  Value: Show me how strong you are!
+Priority: 20
+Branch: 014C79:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

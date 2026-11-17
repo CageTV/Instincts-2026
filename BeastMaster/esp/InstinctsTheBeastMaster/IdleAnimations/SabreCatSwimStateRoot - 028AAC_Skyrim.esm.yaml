@@ -1,0 +1,11 @@
+FormKey: 028AAC:Skyrim.esm
+EditorID: SabreCatSwimStateRoot
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\SabreCat\Behaviors\SabreCatBehavior.hkx
+RelatedIdles:
+- 013003:Skyrim.esm
+- Null

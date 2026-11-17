@@ -6,6 +6,7 @@ Fixes and a native companion for **Instincts - Animal Taming in Skyrim** by Kher
 
 | Folder | What it is |
 |---|---|
+| `BeastMaster/` | **Instincts: The BeastMaster 0.2.0**, the merged and renamed mod: Spriggit source of the single plugin `Instincts - The BeastMaster.esp` (Instincts 1.1.6 + Fixes + Beast Harmony records), the original `.bsa` renamed to match, docs. `build_beastmaster_package.py` builds the archive. The two folders below are the history it was built from. |
 | `Instincts-Fixes/` | Papyrus and plugin fixes for Instincts: third pet summoned, taming checked before the wild animal is destroyed, pet slots by strength, level gates, pets eat from their own inventory, training without the furniture seat. Decompiled originals are kept in `reference/`. |
 | `Beast-Harmony/` | `BeastHarmony.dll` (SKSE, CommonLibSSE-NG) and `BeastHarmony.esp`: knock-out rule for taming dangerous animals, pet classes, jobs, danger alert, menu. GPL-3.0-or-later. |
 

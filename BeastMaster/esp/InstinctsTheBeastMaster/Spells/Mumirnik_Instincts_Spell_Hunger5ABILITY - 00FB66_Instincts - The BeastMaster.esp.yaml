@@ -1,0 +1,21 @@
+FormKey: 00FB66:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_Hunger5ABILITY
+Name:
+  TargetLanguage: English
+  Value: Starving
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 00FB5E:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 0.2
+- BaseEffect: 00FB5D:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 20
+- BaseEffect: 05BC14:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 50

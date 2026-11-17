@@ -1,0 +1,44 @@
+FormKey: 0519B4:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Package_CombatOverride
+Flags:
+- AllowSwimming
+- IgnoreCombat
+- NoCombatAlert
+Type: Package
+InterruptOverride: Combat
+PreferredSpeed: Run
+InterruptFlags:
+- FriendlyFireComments
+ScheduleMonth: -1
+ScheduleDayOfWeek: Any
+ScheduleHour: -1
+ScheduleMinute: -1
+Unknown3: 0x000000
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: GetActorValueConditionData
+    ActorValue: HeavyArmorSkillAdvance
+  ComparisonValue: 1
+OwnerQuest: 00AA17:Instincts - The BeastMaster.esp
+PackageTemplate: 0503D0:Skyrim.esm
+DataInputVersion: 5
+Data:
+- Key: 0
+  Value:
+    MutagenObjectType: PackageDataLocation
+    Location:
+      Target:
+        MutagenObjectType: LocationTarget
+        Link: 000014:Skyrim.esm
+      Radius: 750
+XnamMarker: 0x08
+OnBegin:
+  Topics:
+  - MutagenObjectType: TopicReference
+OnEnd:
+  Topics:
+  - MutagenObjectType: TopicReference
+OnChange:
+  Topics:
+  - MutagenObjectType: TopicReference

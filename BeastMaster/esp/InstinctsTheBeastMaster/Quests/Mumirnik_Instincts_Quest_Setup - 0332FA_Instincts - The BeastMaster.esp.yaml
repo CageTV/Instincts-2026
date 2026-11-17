@@ -1,0 +1,106 @@
+FormKey: 0332FA:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Quest_Setup
+VirtualMachineAdapter:
+  Scripts:
+  - Name: Mumirnik_Quest_AddSpellsToListsSetup
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PlayerRef
+      Object: 000014:Skyrim.esm
+    - MutagenObjectType: ScriptFloatProperty
+      Name: RunDelay
+      Data: 20
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: SpellScrollsList
+      Objects:
+      - Name: ''
+        Object: 065E9D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 05BC09:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: SpellScrollsLootItemsList
+      Objects:
+      - Name: ''
+        Object: 0A44C8:Skyrim.esm
+      - Name: ''
+        Object: 0A44C8:Skyrim.esm
+    - MutagenObjectType: ScriptProperty
+      Name: SpellStavesList
+    - MutagenObjectType: ScriptProperty
+      Name: SpellStavesLootItemsList
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: SpellTomesList
+      Objects:
+      - Name: ''
+        Object: 065E9C:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 065E9C:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 051A07:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 051A07:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: SpellTomesLootItemsList
+      Objects:
+      - Name: ''
+        Object: 0A297D:Skyrim.esm
+      - Name: ''
+        Object: 0A272A:Skyrim.esm
+      - Name: ''
+        Object: 0A297E:Skyrim.esm
+      - Name: ''
+        Object: 0A272B:Skyrim.esm
+    - MutagenObjectType: ScriptProperty
+      Name: SpellTomesSpecialFormListsList
+    - MutagenObjectType: ScriptProperty
+      Name: SpellTomesSpecialList
+  - Name: Mumirnik_Quest_Instincts_InjectCC
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: DestinationFormListEverything
+      Object: 07A2A5:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: DestinationFormListFish
+      Object: 07A2AA:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: DestinationFormListMeat
+      Object: 07A2A7:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: DestinationFormListMeatFish
+      Object: 07A2A6:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: DestinationFormListVegetables
+      Object: 07A2A8:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: DestinationFormListVegetablesMeatFish
+      Object: 07A2A9:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptFloatProperty
+      Name: RunDelay
+      Data: 10
+  - Name: Mumirnik_Quest_LaunchOtherQuest
+    Properties:
+    - MutagenObjectType: ScriptFloatProperty
+      Name: LaunchDelay
+      Data: 1
+    - MutagenObjectType: ScriptObjectProperty
+      Name: LaunchQuest
+      Object: 00AA17:Instincts - The BeastMaster.esp
+  Versioning:
+  - Break0
+  ExtraBindDataVersion: 0
+  FileName: ''
+Name:
+  TargetLanguage: English
+  Value: Setup
+Flags:
+- StartGameEnabled
+- 0x10
+- RunOnce
+NextAliasID: 1
+Aliases:
+- Name: Mumirnik_Instincts_REF_Player
+  Flags: []
+  ForcedReference: 000014:Skyrim.esm
+  Spells:
+  - 0332FC:Instincts - The BeastMaster.esp
+  VoiceTypes: Null

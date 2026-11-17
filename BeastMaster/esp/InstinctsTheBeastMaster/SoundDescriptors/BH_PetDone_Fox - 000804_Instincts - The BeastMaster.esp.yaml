@@ -1,0 +1,8 @@
+FormKey: 000804:Instincts - The BeastMaster.esp
+EditorID: BH_PetDone_Fox
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\fox_yip.wav
+OutputModel: 07F80C:Skyrim.esm
+Priority: 128

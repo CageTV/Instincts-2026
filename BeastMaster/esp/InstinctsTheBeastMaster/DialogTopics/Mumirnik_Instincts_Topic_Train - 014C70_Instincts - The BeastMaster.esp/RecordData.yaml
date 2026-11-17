@@ -1,0 +1,9 @@
+FormKey: 014C70:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_Train
+Name:
+  TargetLanguage: English
+  Value: Let me teach you a few tricks...
+Priority: 30
+Branch: 014C6F:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

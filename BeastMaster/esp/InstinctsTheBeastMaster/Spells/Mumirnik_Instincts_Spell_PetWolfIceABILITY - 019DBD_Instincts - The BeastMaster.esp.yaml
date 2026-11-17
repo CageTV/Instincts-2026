@@ -1,0 +1,21 @@
+FormKey: 019DBD:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_PetWolfIceABILITY
+Name:
+  TargetLanguage: English
+  Value: Pet Ice Wolf Abilities
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 00FB4C:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 10
+- BaseEffect: 00FB45:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 10
+- BaseEffect: 0519BB:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 5

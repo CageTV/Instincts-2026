@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalFloat
+FormKey: 0290E8:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsTrainingIncrementHungerFortify
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 1

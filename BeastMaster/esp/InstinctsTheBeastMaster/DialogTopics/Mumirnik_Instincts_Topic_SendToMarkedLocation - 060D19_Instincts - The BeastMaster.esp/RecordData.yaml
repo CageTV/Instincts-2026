@@ -1,0 +1,9 @@
+FormKey: 060D19:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_SendToMarkedLocation
+Name:
+  TargetLanguage: English
+  Value: Go to our home.
+Priority: 55
+Branch: 060D18:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

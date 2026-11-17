@@ -1,0 +1,19 @@
+FormKey: 00FB44:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_HungerUpABILITY
+Name:
+  TargetLanguage: English
+  Value: Diminish Hunger
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- NoDuration
+- NoArea
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: AlterationSkillAdvance
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: This animal becomes hungry <mag>% slower.

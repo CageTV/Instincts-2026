@@ -1,0 +1,19 @@
+FormKey: 05BC19:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_ExperienceUpHungerABILITY
+Name:
+  TargetLanguage: English
+  Value: That was Delicious!
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- NoDuration
+- NoArea
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: ConjurationSkillAdvance
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

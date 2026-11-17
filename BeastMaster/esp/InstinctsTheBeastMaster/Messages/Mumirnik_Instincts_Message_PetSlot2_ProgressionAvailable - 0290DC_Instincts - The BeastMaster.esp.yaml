@@ -1,0 +1,8 @@
+FormKey: 0290DC:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot2_ProgressionAvailable
+Description:
+  TargetLanguage: English
+  Value: <Alias.Race=Mumirnik_Instincts_REF_Pet2> can now be trained up to level %.0f.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

@@ -1,0 +1,12 @@
+FormKey: 054AF7:Skyrim.esm
+EditorID: BearSwimRoot
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\Bear\Behaviors\BearBehavior.hkx
+RelatedIdles:
+- 013003:Skyrim.esm
+- Null
+AnimationGroupSection: 116

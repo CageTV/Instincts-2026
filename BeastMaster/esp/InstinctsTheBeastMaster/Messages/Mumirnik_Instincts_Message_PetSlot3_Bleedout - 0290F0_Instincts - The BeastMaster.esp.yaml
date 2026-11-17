@@ -1,0 +1,8 @@
+FormKey: 0290F0:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot3_Bleedout
+Description:
+  TargetLanguage: English
+  Value: <Alias.Race=Mumirnik_Instincts_REF_Pet3> has been knocked out.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

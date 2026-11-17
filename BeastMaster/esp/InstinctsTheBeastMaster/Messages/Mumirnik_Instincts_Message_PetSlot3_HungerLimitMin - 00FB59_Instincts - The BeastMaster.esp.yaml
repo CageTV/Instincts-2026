@@ -1,0 +1,9 @@
+FormKey: 00FB59:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot3_HungerLimitMin
+Description:
+  TargetLanguage: English
+  Value: <Alias=Player>'s <Alias.Race=Mumirnik_Instincts_REF_Pet3> is starving.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox

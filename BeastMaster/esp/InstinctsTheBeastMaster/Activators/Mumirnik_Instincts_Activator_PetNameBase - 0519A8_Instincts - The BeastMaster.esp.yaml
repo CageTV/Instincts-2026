@@ -1,0 +1,17 @@
+FormKey: 0519A8:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 67109376
+EditorID: Mumirnik_Instincts_Activator_PetNameBase
+SkyrimMajorRecordFlags:
+- 0x200
+- 0x4000000
+Name:
+  TargetLanguage: English
+  Value: Companion
+Model:
+  File: Effects\FXEmptyObject.nif
+  Data: 0x020000000000000000000000
+MarkerColor: '#00CC4C33'
+Flags: []
+MajorFlags:
+- HiddenFromLocalMap
+- NavMeshGenerationFilter

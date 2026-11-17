@@ -1,0 +1,22 @@
+FormKey: 051963:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_PetABILITY
+Name:
+  TargetLanguage: English
+  Value: Pet Abilities
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 051962:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 150
+  Conditions:
+  - MutagenObjectType: ConditionFloat
+    CompareOperator: GreaterThanOrEqualTo
+    Data:
+      MutagenObjectType: GetDistanceConditionData
+      Target: 000014:Skyrim.esm
+    ComparisonValue: 1280

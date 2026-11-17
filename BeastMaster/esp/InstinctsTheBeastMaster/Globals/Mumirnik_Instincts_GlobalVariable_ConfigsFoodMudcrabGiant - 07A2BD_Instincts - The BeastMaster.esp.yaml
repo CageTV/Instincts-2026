@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 07A2BD:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsFoodMudcrabGiant
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 3

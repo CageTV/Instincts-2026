@@ -1,0 +1,11 @@
+FormKey: 072AE0:Skyrim.esm
+EditorID: DeerSwimRoot
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\Deer\Behaviors\DeerBehavior.hkx
+RelatedIdles:
+- 013003:Skyrim.esm
+- Null

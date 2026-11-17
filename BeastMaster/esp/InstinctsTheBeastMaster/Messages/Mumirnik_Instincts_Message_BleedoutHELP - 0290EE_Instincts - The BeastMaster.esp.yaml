@@ -1,0 +1,8 @@
+FormKey: 0290EE:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_BleedoutHELP
+Description:
+  TargetLanguage: English
+  Value: Your animal is knocked out. It will slowly recover health, and will be unresponsive until then.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

@@ -1,0 +1,11 @@
+FormKey: 04C861:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_SoundDescriptor_DialogueSilence
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- fx\xxx_placeholder_silence.wav
+OutputModel: 07EDCA:Skyrim.esm
+LoopAndRumble:
+  Unknown: 2
+Priority: 128
+StaticAttenuation: 100

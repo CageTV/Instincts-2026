@@ -1,0 +1,34 @@
+FormKey: 076B32:Skyrim.esm
+EditorID: DeerMain_Idle
+Version2: 4
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsPathingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsMovingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsAttackingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInCombatConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsRecoilingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsFleeingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsStaggeredConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\Deer\Behaviors\DeerBehavior.hkx
+RelatedIdles:
+- 076B31:Skyrim.esm
+- Null
+AnimationGroupSection: 97

@@ -1,0 +1,6 @@
+0.2.0 - first release as Instincts - The BeastMaster
+  - One plugin instead of three: Instincts 1.1.6 + Instincts - Fixes 0.1.0 + Beast Harmony 0.1.0 records merged into "Instincts - The BeastMaster.esp".
+  - Original FormIDs kept; Beast Harmony records live at 000800-00080B.
+  - The original .bsa is renamed to "Instincts - The BeastMaster.bsa" so it loads with the plugin.
+  - BeastHarmony.dll looks its records up in the new plugin (it no longer needs BeastHarmony.esp or the original Instincts plugin).
+  - Contains the Kyne's Peace and Spriggan overrides and the race feeding bonus (untested in game).

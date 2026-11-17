@@ -1,0 +1,15 @@
+FormKey: 00FB60:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_Hunger3ABILITY
+Name:
+  TargetLanguage: English
+  Value: Hungry
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 0EB7EA:Skyrim.esm
+  Data:
+    Magnitude: 1

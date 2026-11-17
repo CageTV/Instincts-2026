@@ -1,0 +1,9 @@
+FormKey: 014C73:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_Name
+Name:
+  TargetLanguage: English
+  Value: Let me change your name.
+Priority: 15
+Branch: 014C72:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

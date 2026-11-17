@@ -1,0 +1,17 @@
+FormKey: 051985:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 67109376
+EditorID: Mumirnik_Instincts_Activator_PetNameM6
+SkyrimMajorRecordFlags:
+- 0x200
+- 0x4000000
+Name:
+  TargetLanguage: English
+  Value: Eldgrimr
+Model:
+  File: Effects\FXEmptyObject.nif
+  Data: 0x020000000000000000000000
+MarkerColor: '#00CC4C33'
+Flags: []
+MajorFlags:
+- HiddenFromLocalMap
+- NavMeshGenerationFilter

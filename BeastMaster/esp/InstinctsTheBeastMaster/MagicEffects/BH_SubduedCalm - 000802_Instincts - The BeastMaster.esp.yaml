@@ -1,0 +1,20 @@
+FormKey: 000802:Instincts - The BeastMaster.esp
+EditorID: BH_SubduedCalm
+Name:
+  TargetLanguage: English
+  Value: Subdued
+Flags:
+- Recover
+- NoMagnitude
+- NoArea
+- NoHitEffect
+- NoDeathDispel
+MagicSkill: Illusion
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  Type: Calm
+CastType: FireAndForget
+DualCastScale: 1
+Description:
+  TargetLanguage: English
+  Value: The animal is too dazed to fight.

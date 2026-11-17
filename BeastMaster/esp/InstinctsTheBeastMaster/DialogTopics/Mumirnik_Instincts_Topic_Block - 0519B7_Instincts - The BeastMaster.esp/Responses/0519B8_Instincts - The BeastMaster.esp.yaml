@@ -1,0 +1,49 @@
+FormKey: 0519B8:Instincts - The BeastMaster.esp
+Flags:
+  Flags:
+  - NoLipFile
+PreviousDialog: Null
+FavorLevel: None
+LinkTo:
+- 014C77:Instincts - The BeastMaster.esp
+- 00AA19:Instincts - The BeastMaster.esp
+- 00AA23:Instincts - The BeastMaster.esp
+- 014C70:Instincts - The BeastMaster.esp
+- 00AA27:Instincts - The BeastMaster.esp
+- 014C7D:Instincts - The BeastMaster.esp
+- 0519AF:Instincts - The BeastMaster.esp
+- 0519B2:Instincts - The BeastMaster.esp
+- 060D17:Instincts - The BeastMaster.esp
+- 060D19:Instincts - The BeastMaster.esp
+- 060D20:Instincts - The BeastMaster.esp
+- 014C7A:Instincts - The BeastMaster.esp
+- 014C73:Instincts - The BeastMaster.esp
+- 014C6C:Instincts - The BeastMaster.esp
+Responses:
+- EmotionValue: 50
+  ResponseNumber: 1
+  Unknown2: 0x000000
+  Sound: 04C861:Instincts - The BeastMaster.esp
+  Unknown3: 0x000000
+  Text:
+    TargetLanguage: English
+    Value: (grunt)
+  ScriptNotes: ''
+  Edits: ''
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInListConditionData
+    FormList: 033335:Instincts - The BeastMaster.esp
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInFavorStateConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsBeingRiddenConditionData

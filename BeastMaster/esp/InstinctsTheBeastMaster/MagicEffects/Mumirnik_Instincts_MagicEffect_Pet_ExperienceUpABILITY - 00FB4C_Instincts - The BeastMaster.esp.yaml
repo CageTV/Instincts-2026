@@ -1,0 +1,19 @@
+FormKey: 00FB4C:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_ExperienceUpABILITY
+Name:
+  TargetLanguage: English
+  Value: Good Boi
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- NoDuration
+- NoArea
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: ConjurationSkillAdvance
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: This animal can be trained <mag>% faster.

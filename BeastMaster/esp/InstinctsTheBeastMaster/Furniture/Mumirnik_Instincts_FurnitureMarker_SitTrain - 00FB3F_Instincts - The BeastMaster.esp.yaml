@@ -1,0 +1,33 @@
+FormKey: 00FB3F:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 545259520
+EditorID: Mumirnik_Instincts_FurnitureMarker_SitTrain
+SkyrimMajorRecordFlags:
+- 0x800000
+- 0x20000000
+Name:
+  TargetLanguage: English
+  Value: Ferry Seat
+Model:
+  File: Furniture\SitLedgeMarker.nif
+  Data: 0x020000000000000000000000
+Keywords:
+- 0A56D8:Skyrim.esm
+- 06E9C7:Skyrim.esm
+- 0C4826:Skyrim.esm
+PNAM: 0x00000000
+Flags:
+- 0x40000000
+InteractionKeyword: 013794:Skyrim.esm
+WorkbenchData:
+  UsesSkill: 255
+Markers:
+- Enabled: True
+  EntryPoints:
+    Type:
+    - Sit
+    Points:
+    - Behind
+ModelFilename: Furniture\Invisible\LedgeSitMarker01.nif
+MajorFlags:
+- IsMarker
+- ChildCanUse

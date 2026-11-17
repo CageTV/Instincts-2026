@@ -1,0 +1,8 @@
+FormKey: 000805:Instincts - The BeastMaster.esp
+EditorID: BH_PetDone_DogBark
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\dog_bark.wav
+OutputModel: 07F80C:Skyrim.esm
+Priority: 128

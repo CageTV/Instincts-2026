@@ -1,0 +1,19 @@
+FormKey: 04C840:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_TrainingConfirmCarryWeight
+Description:
+  TargetLanguage: English
+  Value: >-
+    Level: %.0f > %.0f
+
+    Carry Weight: %.0f > %.0f
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox
+MenuButtons:
+- Text:
+    TargetLanguage: English
+    Value: Train
+- Text:
+    TargetLanguage: English
+    Value: Cancel

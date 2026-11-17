@@ -1,0 +1,8 @@
+FormKey: 0290E4:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot2_Tamed
+Description:
+  TargetLanguage: English
+  Value: <Alias.Race=Mumirnik_Instincts_REF_Pet2> has been successfully tamed.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

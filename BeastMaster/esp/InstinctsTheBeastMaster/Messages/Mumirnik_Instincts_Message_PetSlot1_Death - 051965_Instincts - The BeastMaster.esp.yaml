@@ -1,0 +1,8 @@
+FormKey: 051965:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot1_Death
+Description:
+  TargetLanguage: English
+  Value: <Alias.Race=Mumirnik_Instincts_REF_Pet1> has died.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

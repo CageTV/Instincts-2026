@@ -1,0 +1,20 @@
+FormKey: 060D22:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_RehomeCONFIRM
+Description:
+  TargetLanguage: English
+  Value: >-
+    Are you sure you want to set this location as your home?
+
+
+    Tamed animals can be sent home, and will appear at this location.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox
+MenuButtons:
+- Text:
+    TargetLanguage: English
+    Value: Set as Home
+- Text:
+    TargetLanguage: English
+    Value: Cancel

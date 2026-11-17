@@ -1,0 +1,13 @@
+FormKey: 05BC10:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_LoadingScreen_Hunger
+Description:
+  TargetLanguage: English
+  Value: Tamed animals will go hungry over time. Restore their strength by feeding them food they like.
+LoadingScreenNif: 10951B:Skyrim.esm
+InitialScale: 1.7
+InitialRotation: 0, 0, 115
+RotationOffsetConstraints:
+  Min: -180
+  Max: 180
+InitialTranslationOffset: -45, 0, -100
+CameraPath: Cameras\LSCameraPanZoomInSmall.nif

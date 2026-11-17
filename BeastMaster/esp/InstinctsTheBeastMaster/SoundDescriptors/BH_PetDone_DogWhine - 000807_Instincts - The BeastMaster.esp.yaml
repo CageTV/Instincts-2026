@@ -1,0 +1,8 @@
+FormKey: 000807:Instincts - The BeastMaster.esp
+EditorID: BH_PetDone_DogWhine
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\dog_whine.wav
+OutputModel: 07F80C:Skyrim.esm
+Priority: 128

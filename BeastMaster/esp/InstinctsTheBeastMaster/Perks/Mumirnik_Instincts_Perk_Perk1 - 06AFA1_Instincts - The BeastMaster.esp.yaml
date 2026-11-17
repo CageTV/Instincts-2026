@@ -1,0 +1,22 @@
+FormKey: 06AFA1:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Perk_Perk1
+Name:
+  TargetLanguage: English
+  Value: Animal Taming
+Description:
+  TargetLanguage: English
+  Value: Able to tame animals. Aggressive animals must be reduced to 25% health first. Total size of your tamed animals is limited by Speech skill.
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasPerkConditionData
+    Perk: 0BE128:Skyrim.esm
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  CompareOperator: GreaterThanOrEqualTo
+  Data:
+    MutagenObjectType: GetBaseActorValueConditionData
+    ActorValue: Speech
+  ComparisonValue: 30
+NumRanks: 1
+Playable: True

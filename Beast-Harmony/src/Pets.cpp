@@ -15,7 +15,7 @@ namespace Pets
 {
 	namespace
 	{
-		constexpr auto kInstincts = "Instincts - Animal Taming in Skyrim.esp"sv;
+		constexpr auto kInstincts = "Instincts - The BeastMaster.esp"sv;
 
 		enum class Class { Fighter, Scavenger, Gatherer, Producer };
 

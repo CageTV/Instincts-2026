@@ -1,0 +1,20 @@
+FormKey: 00FB45:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_HungerDownABILITY
+Name:
+  TargetLanguage: English
+  Value: Weakness to Hunger
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- Detrimental
+- NoDuration
+- NoArea
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: AlterationSkillAdvance
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: This animal becomes hungry <mag>% faster.

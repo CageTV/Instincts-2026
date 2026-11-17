@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalFloat
+FormKey: 00FB47:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsHungerDecayRateWhenWaiting
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 0.25

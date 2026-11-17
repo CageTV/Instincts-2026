@@ -1,0 +1,22 @@
+FormKey: 05BC0B:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 134217728
+EditorID: MumirnikDELETEME
+SkyrimMajorRecordFlags:
+- 0x8000000
+Name:
+  TargetLanguage: English
+  Value: DELETE ME
+Model:
+  File: Clutter\Containers\Chest01\Chest01.nif
+  Data: 0x020000000000000000000000
+Items:
+- Item:
+    Item: 0A297E:Skyrim.esm
+    Count: 1
+- Item:
+    Item: 0A272B:Skyrim.esm
+    Count: 1
+Flags:
+- Respawns
+MajorFlags:
+- NavMeshGenerationBoundingBox

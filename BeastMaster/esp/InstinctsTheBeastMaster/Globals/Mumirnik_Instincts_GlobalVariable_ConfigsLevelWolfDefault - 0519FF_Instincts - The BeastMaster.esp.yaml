@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 0519FF:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsLevelWolfDefault
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 2

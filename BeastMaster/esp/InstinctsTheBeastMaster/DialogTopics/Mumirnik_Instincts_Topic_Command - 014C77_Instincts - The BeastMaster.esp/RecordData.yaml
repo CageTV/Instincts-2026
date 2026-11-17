@@ -1,0 +1,9 @@
+FormKey: 014C77:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_Command
+Name:
+  TargetLanguage: English
+  Value: Do something for me.
+Priority: 90
+Branch: 014C76:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

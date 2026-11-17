@@ -1,0 +1,20 @@
+FormKey: 05BC14:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_ExperienceDownHungerABILITY
+Name:
+  TargetLanguage: English
+  Value: Feed Me Hooman
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- Detrimental
+- NoDuration
+- NoArea
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: ConjurationSkillAdvance
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

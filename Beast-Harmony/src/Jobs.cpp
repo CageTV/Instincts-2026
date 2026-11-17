@@ -250,7 +250,7 @@ namespace Jobs
 			return now > had || harvested;
 		}
 
-		// the animal's own "task done" sound (generated with ElevenLabs, records BH_PetDone_* in BeastHarmony.esp, files in Data/Sound/FX/BeastHarmony)
+		// the animal's own "task done" sound (generated with ElevenLabs, records BH_PetDone_* in Instincts - The BeastMaster.esp, files in Data/Sound/FX/BeastHarmony)
 		void PlayDone(RE::Actor* a_pet)
 		{
 			if (!Config::GetJobs().sound || !a_pet) {
@@ -269,7 +269,7 @@ namespace Jobs
 			static std::mt19937 rng{ std::random_device{}() };
 			const auto          id = it->second[std::uniform_int_distribution<std::size_t>(0, it->second.size() - 1)(rng)];
 			auto*               dh = RE::TESDataHandler::GetSingleton();
-			auto*               form = dh ? dh->LookupForm<RE::BGSSoundDescriptorForm>(id, "BeastHarmony.esp"sv) : nullptr;
+			auto*               form = dh ? dh->LookupForm<RE::BGSSoundDescriptorForm>(id, "Instincts - The BeastMaster.esp"sv) : nullptr;
 			auto*               am = RE::BSAudioManager::GetSingleton();
 			if (!form || !form->soundDescriptor || !am) {
 				SKSE::log::warn("jobs: sound record {:X} not found", id);

@@ -1,0 +1,21 @@
+FormKey: 00FB5E:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_DamageDownABILITY
+Name:
+  TargetLanguage: English
+  Value: Drain Damage
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- Detrimental
+- NoDuration
+- NoArea
+- HideInUI
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: AttackDamageMult
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 0519EE:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsLevelChaurusReaper
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 20

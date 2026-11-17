@@ -8,7 +8,7 @@
 
 namespace Subdue
 {
-	// Looks up BeastHarmony.esp's records and Instincts' lists, then listens for hits and for the Taming Mode key.
+	// Looks up the BH_* records and Instincts' lists (all in Instincts - The BeastMaster.esp), then listens for hits and for the Taming Mode key.
 	void Init();
 
 	// Does this wild animal currently offer "Attempt to Tame" (a species Instincts can tame, alive, not already a companion, and either a docile

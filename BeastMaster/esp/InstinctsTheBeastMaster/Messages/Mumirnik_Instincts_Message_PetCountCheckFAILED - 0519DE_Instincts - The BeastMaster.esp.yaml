@@ -1,0 +1,8 @@
+FormKey: 0519DE:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetCountCheckFAILED
+Description:
+  TargetLanguage: English
+  Value: You can only tame up to 3 animals at a time.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

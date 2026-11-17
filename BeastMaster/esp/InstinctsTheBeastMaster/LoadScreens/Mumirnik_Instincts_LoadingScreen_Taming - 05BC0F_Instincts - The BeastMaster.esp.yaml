@@ -1,0 +1,13 @@
+FormKey: 05BC0F:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_LoadingScreen_Taming
+Description:
+  TargetLanguage: English
+  Value: You can tame animals by feeding them food they like. Aggressive animals must first be reduced to 25% or less health.
+LoadingScreenNif: 10A160:Skyrim.esm
+InitialScale: 1.1
+InitialRotation: 0, 0, 70
+RotationOffsetConstraints:
+  Min: -180
+  Max: 180
+InitialTranslationOffset: -16, 0, -60
+CameraPath: Cameras\LSCameraPanZoomInSmall.nif

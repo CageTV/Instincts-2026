@@ -1,0 +1,22 @@
+FormKey: 06AFA3:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Perk_Perk3
+Name:
+  TargetLanguage: English
+  Value: Beastmaster
+Description:
+  TargetLanguage: English
+  Value: Increases the total size limit of your tamed animals by 1, enabling you to tame more and bigger animals.
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasPerkConditionData
+    Perk: 06AFA2:Instincts - The BeastMaster.esp
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  CompareOperator: GreaterThanOrEqualTo
+  Data:
+    MutagenObjectType: GetBaseActorValueConditionData
+    ActorValue: Speech
+  ComparisonValue: 80
+NumRanks: 1
+Playable: True

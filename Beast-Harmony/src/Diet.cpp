@@ -15,7 +15,7 @@ namespace Diet
 {
 	namespace
 	{
-		constexpr auto kInstincts = "Instincts - Animal Taming in Skyrim.esp"sv;
+		constexpr auto kInstincts = "Instincts - The BeastMaster.esp"sv;
 
 		struct Item
 		{

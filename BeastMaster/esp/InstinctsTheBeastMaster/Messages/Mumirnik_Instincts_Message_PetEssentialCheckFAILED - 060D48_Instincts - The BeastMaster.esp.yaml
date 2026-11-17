@@ -1,0 +1,8 @@
+FormKey: 060D48:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetEssentialCheckFAILED
+Description:
+  TargetLanguage: English
+  Value: This animal is protected by a thread of fate.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

@@ -1,0 +1,23 @@
+FormKey: 0290EB:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_BleedoutABILITY
+Name:
+  TargetLanguage: English
+  Value: Bleedout
+MenuDisplayObject: 0A0E7D:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 0290EA:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 1
+  Conditions:
+  - MutagenObjectType: ConditionFloat
+    Data:
+      MutagenObjectType: IsBleedingOutConditionData
+    ComparisonValue: 1
+  - MutagenObjectType: ConditionFloat
+    Data:
+      MutagenObjectType: IsInCombatConditionData

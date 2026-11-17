@@ -1,0 +1,9 @@
+FormKey: 0519AF:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_SetPassive
+Name:
+  TargetLanguage: English
+  Value: I need you to stay out of my fights.
+Priority: 85
+Branch: 0519AE:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

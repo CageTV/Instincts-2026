@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 07A2C2:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsFoodSabreCatVale
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 3

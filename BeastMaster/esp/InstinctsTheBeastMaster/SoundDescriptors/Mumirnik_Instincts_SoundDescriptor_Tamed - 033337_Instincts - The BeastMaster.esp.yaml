@@ -1,0 +1,10 @@
+FormKey: 033337:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_SoundDescriptor_Tamed
+Type: Standard
+Category: 07F80B:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\MAG\PowerRacial\MAG_PowerRacial_WoodElfCommandAnimal_Fire_2D.wav
+OutputModel: 0F1B12:Skyrim.esm
+LoopAndRumble: {}
+Priority: 128
+StaticAttenuation: 6.17

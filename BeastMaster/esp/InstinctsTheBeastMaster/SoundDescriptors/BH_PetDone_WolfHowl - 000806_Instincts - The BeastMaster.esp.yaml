@@ -1,0 +1,8 @@
+FormKey: 000806:Instincts - The BeastMaster.esp
+EditorID: BH_PetDone_WolfHowl
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\wolf_howl.wav
+OutputModel: 07F80C:Skyrim.esm
+Priority: 128

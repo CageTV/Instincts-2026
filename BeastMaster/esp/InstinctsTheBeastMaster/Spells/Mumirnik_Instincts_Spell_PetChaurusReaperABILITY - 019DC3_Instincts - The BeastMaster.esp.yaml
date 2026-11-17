@@ -1,0 +1,26 @@
+FormKey: 019DC3:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_PetChaurusReaperABILITY
+Name:
+  TargetLanguage: English
+  Value: Pet Chaurus Reaper Abilities
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 00FB4B:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 20
+- BaseEffect: 0519BB:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 7
+- BaseEffect: 060D96:Instincts - The BeastMaster.esp
+  Data: {}
+  Conditions:
+  - MutagenObjectType: ConditionFloat
+    Data:
+      MutagenObjectType: GetActorValueConditionData
+      ActorValue: LockpickingModifier
+    ComparisonValue: 2

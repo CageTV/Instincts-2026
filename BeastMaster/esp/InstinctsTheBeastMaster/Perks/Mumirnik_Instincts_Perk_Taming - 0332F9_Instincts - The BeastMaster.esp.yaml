@@ -1,0 +1,371 @@
+FormKey: 0332F9:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Perk_Taming
+VirtualMachineAdapter:
+  Scripts:
+  - Name: PRKF_Mumirnik_Instincts_Perk_050332F9
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: ChanceToTameMessageHELP
+      Object: 033339:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetOptionsQuest
+      Object: 00AA17:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TemporaryREF
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 9
+  ScriptFragments:
+    FileName: PRKF_Mumirnik_Instincts_Perk_050332F9
+    Fragments:
+    - Unknown2: 1
+      ScriptName: PRKF_Mumirnik_Instincts_Perk_050332F9
+      FragmentName: Fragment_0
+    - FragmentIndex: 1
+      Unknown2: 1
+      ScriptName: PRKF_Mumirnik_Instincts_Perk_050332F9
+      FragmentName: Fragment_19
+Description:
+  TargetLanguage: English
+  Value: ''
+NumRanks: 1
+Playable: True
+Effects:
+- MutagenObjectType: PerkEntryPointAddActivateChoice
+  Conditions:
+  - Conditions:
+    - MutagenObjectType: ConditionFloat
+      CompareOperator: LessThan
+      Data:
+        MutagenObjectType: GetGlobalValueConditionData
+        Global: 00FB4F:Instincts - The BeastMaster.esp
+      ComparisonValue: 3
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetGlobalValueConditionData
+        Global: 06AFA0:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: HasPerkConditionData
+        Perk: 06AFA1:Instincts - The BeastMaster.esp
+      ComparisonValue: 1
+  - RunOnTabIndex: 1
+    Conditions:
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: GetDeadConditionData
+    - MutagenObjectType: ConditionGlobal
+      CompareOperator: LessThan
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetActorValuePercentConditionData
+        ActorValue: Health
+      ComparisonValue: 05BC0C:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ConditionFloat
+      CompareOperator: LessThanOrEqualTo
+      Data:
+        MutagenObjectType: GetActorValueConditionData
+        ActorValue: Health
+      ComparisonValue: 10
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsCommandedActorConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: GetPlayerTeammateConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsUndeadConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: GetIsGhostConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsEssentialConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsProtectedConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsInListConditionData
+        FormList: 060D67:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: HasKeywordConditionData
+        Keyword: 08E6D2:Update.esm
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0A919D:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 04E785:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0CF89B:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 00D0B2:Dawnguard.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131ED:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 109C7C:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131FA:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 06DC99:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: HasKeywordConditionData
+        Keyword: 0895D1:Update.esm
+      ComparisonValue: 1
+  ButtonLabel:
+    TargetLanguage: English
+    Value: Attempt to Tame
+  EntryPoint: Activate
+  PerkConditionTabCount: 2
+- MutagenObjectType: PerkEntryPointAddActivateChoice
+  Priority: 1
+  Conditions:
+  - Conditions:
+    - MutagenObjectType: ConditionFloat
+      CompareOperator: LessThan
+      Data:
+        MutagenObjectType: GetGlobalValueConditionData
+        Global: 00FB4F:Instincts - The BeastMaster.esp
+      ComparisonValue: 3
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetGlobalValueConditionData
+        Global: 06AFA0:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: HasPerkConditionData
+        Perk: 06AFA1:Instincts - The BeastMaster.esp
+      ComparisonValue: 1
+  - RunOnTabIndex: 1
+    Conditions:
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: GetDeadConditionData
+    - MutagenObjectType: ConditionGlobal
+      CompareOperator: LessThan
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetActorValuePercentConditionData
+        ActorValue: Health
+      ComparisonValue: 05BC0C:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ConditionFloat
+      CompareOperator: LessThanOrEqualTo
+      Data:
+        MutagenObjectType: GetActorValueConditionData
+        ActorValue: Health
+      ComparisonValue: 10
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsCommandedActorConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: GetPlayerTeammateConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: GetIsGhostConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsUndeadConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsEssentialConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsProtectedConditionData
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: IsInListConditionData
+        FormList: 060D67:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ConditionFloat
+      Data:
+        MutagenObjectType: HasKeywordConditionData
+        Keyword: 08E6D2:Update.esm
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 01B658:Dragonborn.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131E8:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131E7:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131E9:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 024038:Dragonborn.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131EB:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0051FB:Dawnguard.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0A5601:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131F8:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 04E507:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 053477:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0131FC:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 0BA545:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 013200:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 013202:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 00D0B6:Dawnguard.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 013201:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: GetIsRaceConditionData
+        Race: 01320A:Skyrim.esm
+      ComparisonValue: 1
+    - MutagenObjectType: ConditionFloat
+      Flags:
+      - OR
+      Data:
+        MutagenObjectType: HasKeywordConditionData
+        Keyword: 0895D0:Update.esm
+      ComparisonValue: 1
+  ButtonLabel:
+    TargetLanguage: English
+    Value: Attempt to Tame
+  Flags:
+    FragmentIndex: 1
+  EntryPoint: Activate
+  PerkConditionTabCount: 2

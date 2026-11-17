@@ -1,0 +1,21 @@
+FormKey: 000801:Instincts - The BeastMaster.esp
+EditorID: BH_SubduedParalysis
+Name:
+  TargetLanguage: English
+  Value: Knocked Out
+Flags:
+- Recover
+- NoMagnitude
+- NoArea
+- NoHitEffect
+- NoDeathDispel
+MagicSkill: Alteration
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: Paralysis
+  Type: Paralysis
+CastType: FireAndForget
+DualCastScale: 1
+Description:
+  TargetLanguage: English
+  Value: The animal is knocked out and helpless.

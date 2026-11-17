@@ -1,0 +1,9 @@
+FormKey: 060D17:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_MarkLocation
+Name:
+  TargetLanguage: English
+  Value: Stay here. This is our home now.
+Priority: 45
+Branch: 060D16:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

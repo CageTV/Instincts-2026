@@ -1,0 +1,66 @@
+FormKey: 051A02:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_SummonCompanions
+VirtualMachineAdapter:
+  Scripts:
+  - Name: Mumirnik_Effect_SummonREFs
+    Properties:
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: ActorREFs
+      Objects:
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 0
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 3
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 4
+    - MutagenObjectType: ScriptObjectProperty
+      Name: SummonEffect
+      Object: 107D96:Skyrim.esm
+    - MutagenObjectType: ScriptFloatProperty
+      Name: SummonEffectDuration
+      Data: 3.5
+Name:
+  TargetLanguage: English
+  Value: Summon Companions
+Keywords:
+- 0806E1:Skyrim.esm
+Flags:
+- SnapToNavmesh
+- NoDuration
+- NoMagnitude
+- NoArea
+BaseCost: 50
+MagicSkill: Conjuration
+CastingLight: 03BA90:Skyrim.esm
+MinimumSkillLevel: 25
+SpellmakingCastingTime: 3
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  Type: Script
+CastType: FireAndForget
+CastingArt: 03CDFC:Skyrim.esm
+ImpactData: 03A1E9:Skyrim.esm
+SkillUsageMultiplier: 0.15
+DualCastScale: 1
+EquipAbility: 044F59:Skyrim.esm
+ImageSpaceModifier: 06F79B:Skyrim.esm
+Sounds:
+- Sound: 03F269:Skyrim.esm
+- Type: Charge
+  Sound: 073FD9:Skyrim.esm
+- Type: Ready
+  Sound: 03C8FA:Skyrim.esm
+- Type: Release
+  Sound: 03F2B1:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: Summons your tamed animals to your location.
+Conditions:
+- MutagenObjectType: ConditionFloat
+  CompareOperator: GreaterThan
+  Data:
+    MutagenObjectType: GetGlobalValueConditionData
+    Global: 00FB4F:Instincts - The BeastMaster.esp

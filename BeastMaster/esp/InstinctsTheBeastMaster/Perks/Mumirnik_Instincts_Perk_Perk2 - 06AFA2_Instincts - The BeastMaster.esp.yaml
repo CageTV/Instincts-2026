@@ -1,0 +1,22 @@
+FormKey: 06AFA2:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Perk_Perk2
+Name:
+  TargetLanguage: English
+  Value: Animal Riding
+Description:
+  TargetLanguage: English
+  Value: Able to ride tamed animals with size 5 or up.
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasPerkConditionData
+    Perk: 06AFA1:Instincts - The BeastMaster.esp
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  CompareOperator: GreaterThanOrEqualTo
+  Data:
+    MutagenObjectType: GetBaseActorValueConditionData
+    ActorValue: Speech
+  ComparisonValue: 50
+NumRanks: 1
+Playable: True

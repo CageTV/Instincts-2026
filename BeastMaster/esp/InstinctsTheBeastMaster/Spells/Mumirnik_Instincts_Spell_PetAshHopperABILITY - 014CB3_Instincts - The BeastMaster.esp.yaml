@@ -1,0 +1,21 @@
+FormKey: 014CB3:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_PetAshHopperABILITY
+Name:
+  TargetLanguage: English
+  Value: Pet Ash Hopper Abilities
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 00FB4B:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 15
+- BaseEffect: 00FB44:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 15
+- BaseEffect: 0519BB:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 4

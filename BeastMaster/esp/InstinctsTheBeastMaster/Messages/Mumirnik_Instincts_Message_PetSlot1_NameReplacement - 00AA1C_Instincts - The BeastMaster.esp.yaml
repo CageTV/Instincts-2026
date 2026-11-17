@@ -1,0 +1,11 @@
+FormKey: 00AA1C:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot1_NameReplacement
+Description:
+  TargetLanguage: English
+  Value: ''
+Name:
+  TargetLanguage: English
+  Value: <Alias=Player>'s <Alias=Mumirnik_Instincts_REF_Pet1Name> (<Alias=Mumirnik_Instincts_REF_Pet1Hunger>)
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

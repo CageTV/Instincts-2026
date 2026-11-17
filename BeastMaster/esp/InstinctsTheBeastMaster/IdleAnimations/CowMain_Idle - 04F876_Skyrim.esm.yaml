@@ -1,0 +1,36 @@
+FormKey: 04F876:Skyrim.esm
+EditorID: CowMain_Idle
+Version2: 9
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsPathingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsMovingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsAttackingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInCombatConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsRecoilingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsFleeingConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsStaggeredConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\Cow\Behaviors\H-CowBehavior.hkx
+AnimationEvent: IdleStop
+RelatedIdles:
+- 04F875:Skyrim.esm
+- Null
+Flags:
+- NoAttacking

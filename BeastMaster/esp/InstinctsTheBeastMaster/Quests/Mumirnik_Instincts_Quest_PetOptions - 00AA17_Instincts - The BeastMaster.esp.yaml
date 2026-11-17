@@ -1,0 +1,765 @@
+FormKey: 00AA17:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Quest_PetOptions
+VirtualMachineAdapter:
+  Scripts:
+  - Name: Mumirnik_Quest_Instincts_Behavior
+  - Name: Mumirnik_Quest_Instincts_Feeding
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: EatSound
+      Object: 00FB43:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: EmptyList
+      Object: 0332F6:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: FoodSublists
+      Object: 07A2CF:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: FoodTypes
+      Object: 07A2CE:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: FullList
+      Object: 07A2A5:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptFloatProperty
+      Name: GoldToHungerIngredientAdd
+      Data: 5
+    - MutagenObjectType: ScriptFloatProperty
+      Name: GoldToHungerIngredientMult
+      Data: 1
+    - MutagenObjectType: ScriptFloatProperty
+      Name: GoldToHungerPotionAdd
+      Data: 5
+    - MutagenObjectType: ScriptFloatProperty
+      Name: GoldToHungerPotionMult
+      Data: 4
+  - Name: Mumirnik_Quest_Instincts_HouseMarker
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: EmptyActivator
+      Object: 0B79FF:Skyrim.esm
+    - MutagenObjectType: ScriptObjectProperty
+      Name: HouseMarkerREF
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 17
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PlayerRef
+      Object: 000014:Skyrim.esm
+    - MutagenObjectType: ScriptFloatProperty
+      Name: WaitDuration
+      Data: 1
+  - Name: Mumirnik_Quest_Instincts_PetOptions
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: ChanceToTame
+      Object: 033336:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: ChanceToTameFAILED
+      Object: 03333A:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: ForcedFemaleRaceList
+      Objects:
+      - Name: ''
+        Object: 0A919D:Skyrim.esm
+      - Name: ''
+        Object: 04E785:Skyrim.esm
+    - MutagenObjectType: ScriptProperty
+      Name: ForcedMaleRaceList
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: ForcedRandomGenderMaleVisualsRaceList
+      Objects:
+      - Name: ''
+        Object: 01B658:Dragonborn.esm
+      - Name: ''
+        Object: 0131E8:Skyrim.esm
+      - Name: ''
+        Object: 0131E7:Skyrim.esm
+      - Name: ''
+        Object: 0131E9:Skyrim.esm
+      - Name: ''
+        Object: 024038:Dragonborn.esm
+      - Name: ''
+        Object: 0131EB:Skyrim.esm
+      - Name: ''
+        Object: 0051FB:Dawnguard.esm
+      - Name: ''
+        Object: 0A5601:Skyrim.esm
+      - Name: ''
+        Object: 109C7C:Skyrim.esm
+      - Name: ''
+        Object: 0131F8:Skyrim.esm
+      - Name: ''
+        Object: 04E507:Skyrim.esm
+      - Name: ''
+        Object: 053477:Skyrim.esm
+      - Name: ''
+        Object: 0131FA:Skyrim.esm
+      - Name: ''
+        Object: 06DC99:Skyrim.esm
+      - Name: ''
+        Object: 0131FC:Skyrim.esm
+      - Name: ''
+        Object: 0131FF:Skyrim.esm
+      - Name: ''
+        Object: 0BA545:Skyrim.esm
+      - Name: ''
+        Object: 013200:Skyrim.esm
+      - Name: ''
+        Object: 013202:Skyrim.esm
+      - Name: ''
+        Object: 00D0B6:Dawnguard.esm
+      - Name: ''
+        Object: 013201:Skyrim.esm
+      - Name: ''
+        Object: 01320A:Skyrim.esm
+    - MutagenObjectType: ScriptProperty
+      Name: ForcedRandomGenderRaceList
+    - MutagenObjectType: ScriptStringProperty
+      Name: GenderAVName
+      Data: LockpickingMod
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: HungerBuffSpell
+      Objects:
+      - Name: ''
+        Object: 019DCD:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 019DCB:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB62:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB60:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB64:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB66:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: IsUnaggressivePetRaceKeyword
+      Object: 014C75:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: NewRaceList
+      Object: 06AFA4:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: OriginalRaceList
+      Object: 023FD8:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetActorListF
+      Object: 060D3F:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetActorListM
+      Object: 060D3E:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetCount
+      Object: 00FB4F:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetCountCheckFAILED
+      Object: 0519DE:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetEssentialCheckFAILED
+      Object: 060D48:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetHungerActivator
+      Objects:
+      - Name: ''
+        Object: 00AA2C:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00AA2D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00AA2E:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00AA2F:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00AA30:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00AA31:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetHungerREF
+      Objects:
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 2
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 7
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 8
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetNameBaseActivator
+      Object: 0519A8:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetNameF
+      Object: 0519A9:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetNameM
+      Object: 0519AA:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetNameREF
+      Objects:
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 14
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 15
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 16
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetNameUnaggressiveF
+      Object: 0519AB:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetNameUnaggressiveM
+      Object: 0519AC:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetPower
+      Object: 0519B9:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetPowerCheckFAILED
+      Object: 0519DD:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetPowerMax
+      Object: 0519BA:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetPowerValuesList
+      Object: 0519C2:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetREF
+      Objects:
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 0
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 3
+      - Name: ''
+        Object: 00AA17:Instincts - The BeastMaster.esp
+        Alias: 4
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PlayerRef
+      Object: 000014:Skyrim.esm
+    - MutagenObjectType: ScriptStringProperty
+      Name: PowerAVName
+      Data: LockpickingPowerMod
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PowerMaxPerk
+      Object: 06AFA3:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: RaceSubstituteActorListF
+      Objects:
+      - Name: ''
+        Object: 060D6B:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4B:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4B:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D56:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D66:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D63:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D61:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D3D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D3D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D3D:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: RaceSubstituteActorListM
+      Objects:
+      - Name: ''
+        Object: 060D6C:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4C:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4C:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4E:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D4E:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D57:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D65:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D64:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 060D62:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 03331B:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 03331B:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 03331B:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: RaceSubstituteOriginalActorBaseList
+      Objects:
+      - Name: ''
+        Object: 0829B6:Skyrim.esm
+      - Name: ''
+        Object: 023AAD:Skyrim.esm
+      - Name: ''
+        Object: 0424F6:Skyrim.esm
+      - Name: ''
+        Object: 04203F:Skyrim.esm
+      - Name: ''
+        Object: 0424FB:Skyrim.esm
+      - Name: ''
+        Object: 023AAC:Skyrim.esm
+      - Name: ''
+        Object: 021875:Skyrim.esm
+      - Name: ''
+        Object: 0E4011:Skyrim.esm
+      - Name: ''
+        Object: 0E4010:Skyrim.esm
+      - Name: ''
+        Object: 023ABF:Skyrim.esm
+      - Name: ''
+        Object: 10F2A3:Skyrim.esm
+      - Name: ''
+        Object: 0C96C1:Skyrim.esm
+    - MutagenObjectType: ScriptObjectProperty
+      Name: SpeechcraftExperienceGainTaming
+      Object: 0519E0:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: TamedMessage
+      Objects:
+      - Name: ''
+        Object: 0290E3:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290E4:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290E5:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TamedSound
+      Object: 033338:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptBoolProperty
+      Name: UsePerkBasedPowerBudget
+  - Name: Mumirnik_Quest_Instincts_PetStats
+    Properties:
+    - MutagenObjectType: ScriptStringProperty
+      Name: ExperienceFortifyAVName
+      Data: ConjurationSkillAdvance
+    - MutagenObjectType: ScriptStringProperty
+      Name: HungerAVName
+      Data: AlterationPowerMod
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: HungerChangeMessage
+      Objects:
+      - Name: ''
+        Object: 00FB41:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB5A:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB5B:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: HungerDecayRateGlobal
+      Object: 00FB46:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: HungerDecayRateWhenWaitingGlobal
+      Object: 00FB47:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptStringProperty
+      Name: HungerFortifyAVName
+      Data: AlterationSkillAdvance
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: HungerLimitMaxMessage
+      Objects:
+      - Name: ''
+        Object: 00FB42:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB56:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB58:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: HungerLimitMinMessage
+      Objects:
+      - Name: ''
+        Object: 00FB48:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB57:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 00FB59:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: IsUnaggressivePetRace
+      Object: 014C75:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptStringProperty
+      Name: MountedSpeedAVName
+      Data: PickpocketPowerMod
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetCount
+      Object: 00FB4F:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetStatisticsMessageF
+      Objects:
+      - Name: ''
+        Object: 00FB49:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290DF:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290E0:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetStatisticsMessageM
+      Objects:
+      - Name: ''
+        Object: 0519E4:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0519E5:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0519E6:Instincts - The BeastMaster.esp
+  - Name: Mumirnik_Quest_Instincts_PetTraining
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: IsUnaggressivePetRace
+      Object: 014C75:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: LevelUpMessage
+      Object: 0290DB:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptStringProperty
+      Name: PetLevelAvailableFlagAVName
+      Data: SmithingPowerMod
+    - MutagenObjectType: ScriptStringProperty
+      Name: PetLevelAVName
+      Data: SmithingMod
+    - MutagenObjectType: ScriptStringProperty
+      Name: PetLevelProgressAVName
+      Data: SmithingSkillAdvance
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetLevelsList
+      Object: 051A01:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetStatisticsTrainingMessage
+      Objects:
+      - Name: ''
+        Object: 014C8A:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290E1:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290E2:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: PetStatisticsTrainingMessageUnaggressive
+      Objects:
+      - Name: ''
+        Object: 04C83D:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 04C83E:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 04C83F:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PlayerRef
+      Object: 000014:Skyrim.esm
+    - MutagenObjectType: ScriptObjectListProperty
+      Name: ProgressionAvailableMessage
+      Objects:
+      - Name: ''
+        Object: 023FDA:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290DC:Instincts - The BeastMaster.esp
+      - Name: ''
+        Object: 0290DD:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: SpeechcraftExperienceGainTraining
+      Object: 0519E1:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingConfirmMessageAttackDamage
+      Object: 019DD1:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingConfirmMessageCarryWeight
+      Object: 04C840:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingConfirmMessageHealth
+      Object: 019DD4:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingConfirmMessageHungerFortify
+      Object: 019DD5:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingIncrementAttackDamageGlobal
+      Object: 0290E6:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingIncrementCarryWeightGlobal
+      Object: 04C83C:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingIncrementHealthGlobal
+      Object: 0290E7:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: TrainingIncrementHungerFortifyGlobal
+      Object: 0290E8:Instincts - The BeastMaster.esp
+  - Name: Mumirnik_Quest_Instincts_Riding
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: MountREF
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 18
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PlayerRef
+      Object: 000014:Skyrim.esm
+  - Name: Mumirnik_Quest_UseFurniture
+    Properties:
+    - MutagenObjectType: ScriptFloatProperty
+      Name: CheckUsageRate
+      Data: 0.5
+    - MutagenObjectType: ScriptFloatProperty
+      Name: HeightOffset
+    - MutagenObjectType: ScriptIntProperty
+      Name: NumberOfTries
+      Data: 12
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PlayerRef
+      Object: 000014:Skyrim.esm
+  FileName: ''
+  Aliases:
+  - Property:
+      Name: ''
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 0
+    Scripts:
+    - Name: Mumirnik_REF_Instincts_PetRef
+      Properties:
+      - MutagenObjectType: ScriptObjectProperty
+        Name: BleedoutMessage
+        Object: 0290ED:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: BleedoutMessageHELP
+        Object: 0290EE:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: CurrentPetIsEatingGlobal
+        Object: 04773B:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: DeathMessage
+        Object: 051965:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: PlayerRef
+        Object: 000014:Skyrim.esm
+      - MutagenObjectType: ScriptFloatProperty
+        Name: SendToMarkedLocationUpdateTimer
+        Data: 2
+  - Property:
+      Name: ''
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 3
+    Scripts:
+    - Name: Mumirnik_REF_Instincts_PetRef
+      Properties:
+      - MutagenObjectType: ScriptObjectProperty
+        Name: BleedoutMessage
+        Object: 0290EF:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: BleedoutMessageHELP
+        Object: 0290EE:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: CurrentPetIsEatingGlobal
+        Object: 04773B:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: DeathMessage
+        Object: 051966:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: PlayerRef
+        Object: 000014:Skyrim.esm
+      - MutagenObjectType: ScriptFloatProperty
+        Name: SendToMarkedLocationUpdateTimer
+        Data: 2
+  - Property:
+      Name: ''
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 4
+    Scripts:
+    - Name: Mumirnik_REF_Instincts_PetRef
+      Properties:
+      - MutagenObjectType: ScriptObjectProperty
+        Name: BleedoutMessage
+        Object: 0290F0:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: BleedoutMessageHELP
+        Object: 0290EE:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: CurrentPetIsEatingGlobal
+        Object: 04773B:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: DeathMessage
+        Object: 051967:Instincts - The BeastMaster.esp
+      - MutagenObjectType: ScriptObjectProperty
+        Name: PlayerRef
+        Object: 000014:Skyrim.esm
+      - MutagenObjectType: ScriptFloatProperty
+        Name: SendToMarkedLocationUpdateTimer
+        Data: 2
+  - Property:
+      Name: ''
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 9
+    Scripts:
+    - Name: Mumirnik_REF_Instincts_BeingTamed
+      Properties:
+      - MutagenObjectType: ScriptFloatProperty
+        Name: GoldToTamingStrengthIngredientAdd
+        Data: 5
+      - MutagenObjectType: ScriptFloatProperty
+        Name: GoldToTamingStrengthIngredientMult
+        Data: 1
+      - MutagenObjectType: ScriptFloatProperty
+        Name: GoldToTamingStrengthPotionAdd
+        Data: 5
+      - MutagenObjectType: ScriptFloatProperty
+        Name: GoldToTamingStrengthPotionMult
+        Data: 4
+  - Property:
+      Name: ''
+      Object: 00AA17:Instincts - The BeastMaster.esp
+      Alias: 18
+    Scripts:
+    - Name: Mumirnik_REF_Instincts_ClearHorse
+      Properties:
+      - MutagenObjectType: ScriptFloatProperty
+        Name: StayMountedUpdateTimer
+        Data: 0.5
+Name:
+  TargetLanguage: English
+  Value: Pet Options
+Flags:
+- RunOnce
+TextDisplayGlobals:
+- 00AA2B:Instincts - The BeastMaster.esp
+- 00AA2A:Instincts - The BeastMaster.esp
+- 0290DE:Instincts - The BeastMaster.esp
+NextAliasID: 19
+Aliases:
+- ID: 2
+  Name: Mumirnik_Instincts_REF_Pet1Hunger
+  Flags:
+  - Optional
+  - StoresText
+  - ClearNamesWhenRemoved
+  VoiceTypes: Null
+- ID: 7
+  Name: Mumirnik_Instincts_REF_Pet2Hunger
+  Flags:
+  - Optional
+  - StoresText
+  - ClearNamesWhenRemoved
+  VoiceTypes: Null
+- ID: 8
+  Name: Mumirnik_Instincts_REF_Pet3Hunger
+  Flags:
+  - Optional
+  - StoresText
+  - ClearNamesWhenRemoved
+  VoiceTypes: Null
+- ID: 14
+  Name: Mumirnik_Instincts_REF_Pet1Name
+  Flags:
+  - Optional
+  - StoresText
+  - ClearNamesWhenRemoved
+  VoiceTypes: Null
+- ID: 15
+  Name: Mumirnik_Instincts_REF_Pet2Name
+  Flags:
+  - Optional
+  - StoresText
+  - ClearNamesWhenRemoved
+  VoiceTypes: Null
+- ID: 16
+  Name: Mumirnik_Instincts_REF_Pet3Name
+  Flags:
+  - Optional
+  - StoresText
+  - ClearNamesWhenRemoved
+  VoiceTypes: Null
+- Name: Mumirnik_Instincts_REF_Pet1
+  Flags:
+  - Optional
+  - Essential
+  - StoresText
+  - UsesStoredText
+  - ClearNamesWhenRemoved
+  CombatOverridePackageList: 0519B5:Instincts - The BeastMaster.esp
+  DisplayName: 00AA1C:Instincts - The BeastMaster.esp
+  Spells:
+  - 0290EB:Instincts - The BeastMaster.esp
+  - 051963:Instincts - The BeastMaster.esp
+  Factions:
+  - 00AA1B:Instincts - The BeastMaster.esp
+  - 09E0C9:Skyrim.esm
+  PackageData:
+  - 060D1C:Instincts - The BeastMaster.esp
+  - 00AA1F:Instincts - The BeastMaster.esp
+  - 00AA21:Instincts - The BeastMaster.esp
+  VoiceTypes: Null
+- ID: 3
+  Name: Mumirnik_Instincts_REF_Pet2
+  Flags:
+  - Optional
+  - Essential
+  - StoresText
+  - UsesStoredText
+  - ClearNamesWhenRemoved
+  CombatOverridePackageList: 0519B5:Instincts - The BeastMaster.esp
+  DisplayName: 00FB52:Instincts - The BeastMaster.esp
+  Spells:
+  - 0290EB:Instincts - The BeastMaster.esp
+  - 051963:Instincts - The BeastMaster.esp
+  Factions:
+  - 00AA1B:Instincts - The BeastMaster.esp
+  - 09E0C9:Skyrim.esm
+  PackageData:
+  - 060D1C:Instincts - The BeastMaster.esp
+  - 00AA1F:Instincts - The BeastMaster.esp
+  - 00AA21:Instincts - The BeastMaster.esp
+  VoiceTypes: Null
+- ID: 4
+  Name: Mumirnik_Instincts_REF_Pet3
+  Flags:
+  - Optional
+  - Essential
+  - StoresText
+  - UsesStoredText
+  - ClearNamesWhenRemoved
+  CombatOverridePackageList: 0519B5:Instincts - The BeastMaster.esp
+  DisplayName: 00FB53:Instincts - The BeastMaster.esp
+  Spells:
+  - 0290EB:Instincts - The BeastMaster.esp
+  - 051963:Instincts - The BeastMaster.esp
+  Factions:
+  - 00AA1B:Instincts - The BeastMaster.esp
+  - 09E0C9:Skyrim.esm
+  PackageData:
+  - 060D1C:Instincts - The BeastMaster.esp
+  - 00AA1F:Instincts - The BeastMaster.esp
+  - 00AA21:Instincts - The BeastMaster.esp
+  VoiceTypes: Null
+- ID: 10
+  Name: Mumirnik_Instincts_REF_Pet1Original
+  Flags:
+  - Optional
+  VoiceTypes: Null
+- ID: 11
+  Name: Mumirnik_Instincts_REF_Pet2Original
+  Flags:
+  - Optional
+  VoiceTypes: Null
+- ID: 12
+  Name: Mumirnik_Instincts_REF_Pet3Original
+  Flags:
+  - Optional
+  VoiceTypes: Null
+- ID: 9
+  Name: Mumirnik_Instincts_REF_Temporary
+  Flags:
+  - Optional
+  VoiceTypes: Null
+- ID: 17
+  Name: Mumirnik_Instincts_REF_HouseMarker
+  Flags:
+  - Optional
+  VoiceTypes: Null
+- ID: 18
+  Name: Mumirnik_Instincts_REF_Mount
+  Flags:
+  - Optional
+  Keywords:
+  - 026110:Skyrim.esm
+  VoiceTypes: Null

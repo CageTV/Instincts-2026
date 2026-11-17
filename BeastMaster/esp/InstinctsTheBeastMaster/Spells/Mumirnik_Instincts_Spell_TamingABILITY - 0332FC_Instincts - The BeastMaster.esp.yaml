@@ -1,0 +1,14 @@
+FormKey: 0332FC:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_TamingABILITY
+Name:
+  TargetLanguage: English
+  Value: Taming
+MenuDisplayObject: 109AC2:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 0332FB:Instincts - The BeastMaster.esp
+  Data: {}

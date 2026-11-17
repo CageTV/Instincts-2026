@@ -1,0 +1,22 @@
+FormKey: 065E9A:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_ShieldCompanions
+Name:
+  TargetLanguage: English
+  Value: Shield Companions
+MenuDisplayObject: 109AC2:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+BaseCost: 139
+Flags:
+- AreaEffectIgnoresLOS
+ChargeTime: 0.5
+CastType: FireAndForget
+HalfCostPerk: 0C44B7:Skyrim.esm
+Effects:
+- BaseEffect: 065E99:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 120
+    Area: 50
+    Duration: 60

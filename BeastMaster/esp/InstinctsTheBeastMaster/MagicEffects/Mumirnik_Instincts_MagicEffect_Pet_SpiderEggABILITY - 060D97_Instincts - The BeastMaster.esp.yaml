@@ -1,0 +1,34 @@
+FormKey: 060D97:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_SpiderEggABILITY
+VirtualMachineAdapter:
+  Scripts:
+  - Name: Mumirnik_Effect_GenerateIngredients
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: IngredientToGenerate
+      Object: 09151B:Skyrim.esm
+    - MutagenObjectType: ScriptIntProperty
+      Name: MaxIngredients
+      Data: 3
+    - MutagenObjectType: ScriptFloatProperty
+      Name: UpdateTimerGameTime
+      Data: 12
+Name:
+  TargetLanguage: English
+  Value: Lay Eggs
+MenuDisplayObject: 0A0E7D:Skyrim.esm
+Flags:
+- Recover
+- NoDuration
+- NoMagnitude
+- NoArea
+- HideInUI
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  Type: Script
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

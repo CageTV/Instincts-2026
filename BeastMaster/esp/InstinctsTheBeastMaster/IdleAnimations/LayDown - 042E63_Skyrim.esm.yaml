@@ -1,0 +1,30 @@
+FormKey: 042E63:Skyrim.esm
+EditorID: LayDown
+Version2: 6
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInCombatConditionData
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: GetGraphVariableIntConditionData
+    GraphVariable: isIdleSitting
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: GetGraphVariableIntConditionData
+    GraphVariable: isIdleLay
+- MutagenObjectType: ConditionFloat
+  CompareOperator: LessThan
+  Data:
+    MutagenObjectType: GetRandomPercentConditionData
+  ComparisonValue: 30
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\SabreCat\Behaviors\SabreCatBehavior.hkx
+AnimationEvent: idleSabreCatLieDownStart
+RelatedIdles:
+- 042E62:Skyrim.esm
+- 042E65:Skyrim.esm
+AnimationGroupSection: 9

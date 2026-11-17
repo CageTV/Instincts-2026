@@ -1,0 +1,18 @@
+FormKey: 0519DD:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetPowerCheckFAILED
+Description:
+  TargetLanguage: English
+  Value: >-
+    This animal is too big to tame right now.
+
+
+    Total size of tamed animals: %.0f/%.0f
+
+    Size of this animal: %.0f
+
+
+    Release animals or raise your Speech level to tame this animal.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox

@@ -1,0 +1,43 @@
+FormKey: 014C74:Instincts - The BeastMaster.esp
+VirtualMachineAdapter:
+  Scripts:
+  - Name: TIF__05014C74
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: RenameMessageCONFIRM
+      Object: 0519AD:Instincts - The BeastMaster.esp
+  ScriptFragments:
+    MutagenObjectType: ScriptFragments
+    FileName: TIF__05014C74
+    OnEnd:
+      ExtraBindDataVersion: 1
+      ScriptName: TIF__05014C74
+      FragmentName: Fragment_0
+Flags:
+  Flags:
+  - Goodbye
+  - NoLipFile
+PreviousDialog: Null
+FavorLevel: None
+Responses:
+- EmotionValue: 50
+  ResponseNumber: 1
+  Unknown2: 0x000000
+  Sound: 04C861:Instincts - The BeastMaster.esp
+  Unknown3: 0x000000
+  Text:
+    TargetLanguage: English
+    Value: (grunt)
+  ScriptNotes: ''
+  Edits: ''
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+  ComparisonValue: 1
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: IsInListConditionData
+    FormList: 033335:Instincts - The BeastMaster.esp
+  ComparisonValue: 1

@@ -1,0 +1,9 @@
+FormKey: 00AA19:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_Wait
+Name:
+  TargetLanguage: English
+  Value: Wait here.
+Priority: 95
+Branch: 00AA18:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

@@ -1,0 +1,16 @@
+FormKey: 0519AD:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_RenameCONFIRM
+Description:
+  TargetLanguage: English
+  Value: Are you sure you want to give this animal a random name?
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox
+MenuButtons:
+- Text:
+    TargetLanguage: English
+    Value: Name
+- Text:
+    TargetLanguage: English
+    Value: Cancel

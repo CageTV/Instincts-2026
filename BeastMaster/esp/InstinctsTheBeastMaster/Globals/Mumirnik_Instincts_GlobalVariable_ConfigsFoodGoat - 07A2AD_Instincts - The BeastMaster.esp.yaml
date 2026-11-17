@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 07A2AD:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsFoodGoat
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 0

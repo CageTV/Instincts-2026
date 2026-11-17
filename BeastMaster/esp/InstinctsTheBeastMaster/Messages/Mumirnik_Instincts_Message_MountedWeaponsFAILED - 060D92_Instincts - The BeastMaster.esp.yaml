@@ -1,0 +1,8 @@
+FormKey: 060D92:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_MountedWeaponsFAILED
+Description:
+  TargetLanguage: English
+  Value: Cannot mount this animal with weapons drawn.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

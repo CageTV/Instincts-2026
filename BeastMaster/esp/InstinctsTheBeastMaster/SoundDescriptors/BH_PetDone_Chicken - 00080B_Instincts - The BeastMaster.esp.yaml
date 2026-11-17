@@ -1,0 +1,8 @@
+FormKey: 00080B:Instincts - The BeastMaster.esp
+EditorID: BH_PetDone_Chicken
+Type: Standard
+Category: 0172A1:Skyrim.esm
+SoundFiles:
+- Data\Sound\FX\BeastHarmony\chicken_cluck.wav
+OutputModel: 07F80C:Skyrim.esm
+Priority: 128

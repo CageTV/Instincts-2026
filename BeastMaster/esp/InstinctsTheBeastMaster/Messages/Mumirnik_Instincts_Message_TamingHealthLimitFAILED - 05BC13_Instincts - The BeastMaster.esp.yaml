@@ -1,0 +1,8 @@
+FormKey: 05BC13:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_TamingHealthLimitFAILED
+Description:
+  TargetLanguage: English
+  Value: Aggressive animals must be reduced to 25%% health to tame them.
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+DisplayTime: 2

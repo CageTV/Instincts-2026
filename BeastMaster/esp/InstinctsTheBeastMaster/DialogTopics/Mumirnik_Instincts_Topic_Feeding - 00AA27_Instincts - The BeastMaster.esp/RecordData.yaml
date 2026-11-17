@@ -1,0 +1,9 @@
+FormKey: 00AA27:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Topic_Feeding
+Name:
+  TargetLanguage: English
+  Value: Eat something...
+Priority: 80
+Branch: 00AA26:Instincts - The BeastMaster.esp
+Quest: 00AA17:Instincts - The BeastMaster.esp
+SubtypeName: CUST

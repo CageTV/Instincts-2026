@@ -1,0 +1,23 @@
+FormKey: 051962:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_SpeedUpDistanceABILITY
+Name:
+  TargetLanguage: English
+  Value: Close Distance
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- Recover
+- NoDuration
+- NoArea
+- HideInUI
+SecondActorValueWeight: 0.01
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: SpeedMult
+  Type: DualValueModifier
+SecondActorValue: CarryWeight
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

@@ -1,0 +1,13 @@
+FormKey: 05BC11:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_LoadingScreen_Upgrade
+Description:
+  TargetLanguage: English
+  Value: Tamed animals gain experience until they reach the level of their master. When they level up, you may choose to increase their damage or carry weight, their health, or their hunger resistance.
+LoadingScreenNif: 10A16F:Skyrim.esm
+InitialScale: 1
+InitialRotation: 0, 0, -165
+RotationOffsetConstraints:
+  Min: -180
+  Max: 180
+InitialTranslationOffset: 0, 0, -50
+CameraPath: Cameras\LSCameraPanZoomInSmall.nif

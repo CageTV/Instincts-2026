@@ -1,0 +1,21 @@
+FormKey: 0290EA:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_BleedoutABILITY
+Name:
+  TargetLanguage: English
+  Value: Bleedout Recovery
+MenuDisplayObject: 0A0E7D:Skyrim.esm
+Flags:
+- NoDuration
+- NoArea
+- FXPersist
+- HideInUI
+HitShader: 0290E9:Instincts - The BeastMaster.esp
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  ActorValue: Health
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

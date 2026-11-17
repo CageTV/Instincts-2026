@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 07A2B8:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsFoodFrostbiteSpiderRegularSnow
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 2

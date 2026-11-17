@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalShort
+FormKey: 060D74:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsPowerFrostbiteSpiderRegularSnow
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 4

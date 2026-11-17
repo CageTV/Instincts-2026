@@ -1,0 +1,32 @@
+FormKey: 014C84:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_AttackIncreasesHunger
+VirtualMachineAdapter:
+  Scripts:
+  - Name: Mumirnik_Effect_Instincts_ModHunger
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: HungerAmount
+      Object: 014C85:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetOptionsQuest
+      Object: 00AA17:Instincts - The BeastMaster.esp
+Name:
+  TargetLanguage: English
+  Value: Predator
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- NoDuration
+- NoMagnitude
+- NoArea
+- HideInUI
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  Type: Script
+CastType: FireAndForget
+TargetType: Touch
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: Attacking reduces Hunger.

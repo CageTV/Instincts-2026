@@ -1,0 +1,13 @@
+FormKey: 05BC12:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_LoadingScreen_Name
+Description:
+  TargetLanguage: English
+  Value: You can name your tamed animals.
+LoadingScreenNif: 10951F:Skyrim.esm
+InitialScale: 0.85
+InitialRotation: 0, 0, 75
+RotationOffsetConstraints:
+  Min: -180
+  Max: 180
+InitialTranslationOffset: 32, 0, -125
+CameraPath: Cameras\LSCameraPanZoomInSmall.nif

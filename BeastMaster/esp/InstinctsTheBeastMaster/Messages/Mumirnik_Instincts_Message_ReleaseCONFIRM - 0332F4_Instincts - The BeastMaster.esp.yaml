@@ -1,0 +1,16 @@
+FormKey: 0332F4:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_ReleaseCONFIRM
+Description:
+  TargetLanguage: English
+  Value: Are you sure you want to release this animal permanently?
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox
+MenuButtons:
+- Text:
+    TargetLanguage: English
+    Value: Release Permanently
+- Text:
+    TargetLanguage: English
+    Value: Cancel

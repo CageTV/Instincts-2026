@@ -1,0 +1,15 @@
+FormKey: 014C88:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_AttackIncreasesHunger
+Name:
+  TargetLanguage: English
+  Value: Predator
+MenuDisplayObject: 10FEF4:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+CastType: FireAndForget
+TargetType: Touch
+Effects:
+- BaseEffect: 014C84:Instincts - The BeastMaster.esp
+  Data: {}

@@ -1,0 +1,32 @@
+FormKey: 014C82:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_MagicEffect_Pet_AttackIncreasesExperience
+VirtualMachineAdapter:
+  Scripts:
+  - Name: Mumirnik_Effect_Instincts_RaiseExp
+    Properties:
+    - MutagenObjectType: ScriptObjectProperty
+      Name: ExperienceAmount
+      Object: 014C83:Instincts - The BeastMaster.esp
+    - MutagenObjectType: ScriptObjectProperty
+      Name: PetOptionsQuest
+      Object: 00AA17:Instincts - The BeastMaster.esp
+Name:
+  TargetLanguage: English
+  Value: Hunting Instinct
+MenuDisplayObject: 0435A5:Skyrim.esm
+Flags:
+- NoDuration
+- NoMagnitude
+- NoArea
+- HideInUI
+Archetype:
+  MutagenObjectType: MagicEffectArchetype
+  Type: Script
+CastType: FireAndForget
+TargetType: Touch
+DualCastScale: 1
+CastingSoundLevel: Normal
+Sounds: []
+Description:
+  TargetLanguage: English
+  Value: ''

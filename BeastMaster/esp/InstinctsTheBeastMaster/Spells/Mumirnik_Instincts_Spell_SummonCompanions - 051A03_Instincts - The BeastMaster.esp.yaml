@@ -1,0 +1,21 @@
+FormKey: 051A03:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_SummonCompanions
+Name:
+  TargetLanguage: English
+  Value: Summon Companions
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F45:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+BaseCost: 50
+Flags:
+- NoDualCastModification
+ChargeTime: 3
+CastType: FireAndForget
+HalfCostPerk: 0C44BB:Skyrim.esm
+Effects:
+- BaseEffect: 051A02:Instincts - The BeastMaster.esp
+  Data: {}
+- BaseEffect: 051A05:Instincts - The BeastMaster.esp
+  Data: {}

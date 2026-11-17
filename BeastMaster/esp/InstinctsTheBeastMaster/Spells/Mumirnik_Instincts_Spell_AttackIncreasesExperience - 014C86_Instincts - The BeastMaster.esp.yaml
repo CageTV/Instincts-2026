@@ -1,0 +1,15 @@
+FormKey: 014C86:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_AttackIncreasesExperience
+Name:
+  TargetLanguage: English
+  Value: Hunting Instinct
+MenuDisplayObject: 10FEF4:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+CastType: FireAndForget
+TargetType: Touch
+Effects:
+- BaseEffect: 014C82:Instincts - The BeastMaster.esp
+  Data: {}

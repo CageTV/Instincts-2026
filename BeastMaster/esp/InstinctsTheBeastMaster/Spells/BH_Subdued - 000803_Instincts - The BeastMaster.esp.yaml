@@ -1,0 +1,21 @@
+FormKey: 000803:Instincts - The BeastMaster.esp
+EditorID: BH_Subdued
+Name:
+  TargetLanguage: English
+  Value: Subdued
+Description:
+  TargetLanguage: English
+  Value: ''
+Flags:
+- ManualCostCalc
+- IgnoreResistance
+- NoAbsorbOrReflect
+CastType: FireAndForget
+Effects:
+- BaseEffect: 000801:Instincts - The BeastMaster.esp
+  Data:
+    Duration: 60
+- BaseEffect: 000802:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 100
+    Duration: 60

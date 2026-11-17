@@ -12,7 +12,7 @@ namespace Look
 {
 	namespace
 	{
-		constexpr auto kInstincts = "Instincts - Animal Taming in Skyrim.esp"sv;
+		constexpr auto kInstincts = "Instincts - The BeastMaster.esp"sv;
 		constexpr auto kVariants = "DynamicAnimalVariantsPlus.esp"sv;
 
 		std::map<RE::FormID, RE::TESRace*> petRaceOf;  // wild race -> Instincts pet race

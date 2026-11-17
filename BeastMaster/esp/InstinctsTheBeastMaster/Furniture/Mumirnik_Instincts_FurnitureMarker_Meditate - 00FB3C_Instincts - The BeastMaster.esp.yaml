@@ -1,0 +1,25 @@
+FormKey: 00FB3C:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_FurnitureMarker_Meditate
+Name:
+  TargetLanguage: English
+  Value: Feed
+Model:
+  File: Furniture\GreybeardMeditate.nif
+  Data: 0x020000000000000000000000
+Keywords:
+- 0F688E:Skyrim.esm
+- 06E9C7:Skyrim.esm
+PNAM: 0x00000000
+Flags:
+- 0x40000000
+InteractionKeyword: 013794:Skyrim.esm
+WorkbenchData:
+  UsesSkill: 255
+Markers:
+- Enabled: True
+  EntryPoints:
+    Type:
+    - Sit
+    Points:
+    - Behind
+ModelFilename: Furniture\GreybeardMeditate.nif

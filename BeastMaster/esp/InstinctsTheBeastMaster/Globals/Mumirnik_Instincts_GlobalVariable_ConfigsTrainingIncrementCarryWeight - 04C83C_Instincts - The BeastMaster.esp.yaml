@@ -1,0 +1,9 @@
+MutagenObjectType: GlobalFloat
+FormKey: 04C83C:Instincts - The BeastMaster.esp
+MajorRecordFlagsRaw: 64
+EditorID: Mumirnik_Instincts_GlobalVariable_ConfigsTrainingIncrementCarryWeight
+SkyrimMajorRecordFlags:
+- 0x40
+MajorFlags:
+- Constant
+Data: 2

@@ -1,0 +1,11 @@
+FormKey: 060033:Skyrim.esm
+EditorID: WolfSwimRoot
+Conditions:
+- MutagenObjectType: ConditionFloat
+  Data:
+    MutagenObjectType: HasKeywordConditionData
+    Keyword: 005901:Update.esm
+Filename: Actors\Canine\Behaviors Wolf\WolfBehavior.hkx
+RelatedIdles:
+- 013003:Skyrim.esm
+- Null

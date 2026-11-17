@@ -1,0 +1,21 @@
+FormKey: 019DCB:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Spell_Hunger1ABILITY
+Name:
+  TargetLanguage: English
+  Value: Satisfied
+MenuDisplayObject: 0A6459:Skyrim.esm
+EquipmentType: 013F44:Skyrim.esm
+Description:
+  TargetLanguage: English
+  Value: ''
+Type: Ability
+Effects:
+- BaseEffect: 00FB5F:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 0.1
+- BaseEffect: 00FB5C:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 10
+- BaseEffect: 05BC19:Instincts - The BeastMaster.esp
+  Data:
+    Magnitude: 25

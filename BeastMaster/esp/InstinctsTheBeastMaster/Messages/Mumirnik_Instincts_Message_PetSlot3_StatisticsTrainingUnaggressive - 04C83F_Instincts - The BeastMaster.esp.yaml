@@ -1,0 +1,33 @@
+FormKey: 04C83F:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot3_StatisticsTrainingUnaggressive
+Description:
+  TargetLanguage: English
+  Value: >-
+    <Alias.Race=Mumirnik_Instincts_REF_Pet3> will become permanently stronger.
+
+
+    Level: %.0f
+
+
+    Carry Weight: %.0f
+
+    Health: %.0f
+
+    Hunger Resistance: %+.0f%%
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox
+MenuButtons:
+- Text:
+    TargetLanguage: English
+    Value: Train Carry Weight
+- Text:
+    TargetLanguage: English
+    Value: Train Health
+- Text:
+    TargetLanguage: English
+    Value: Train Hunger Resistance
+- Text:
+    TargetLanguage: English
+    Value: Finish Training

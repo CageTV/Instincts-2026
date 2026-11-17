@@ -1,0 +1,30 @@
+FormKey: 0519E6:Instincts - The BeastMaster.esp
+EditorID: Mumirnik_Instincts_Message_PetSlot3_StatisticsM
+Description:
+  TargetLanguage: English
+  Value: >-
+    <Alias.Race=Mumirnik_Instincts_REF_Pet3>
+
+
+    Level: %.0f
+
+    Can be Trained up to Level: %.0f (%.0f%% to next)
+
+
+    Damage: %.0f
+
+    Carry Weight: %.0f
+
+    Health: %.0f
+
+    Hunger Resistance: %+.0f%%
+
+    Experience Gain: %+.0f%%
+
+    Size: %.0f
+
+    Male
+INAM: 0x00000000
+Quest: 00AA17:Instincts - The BeastMaster.esp
+Flags:
+- MessageBox
