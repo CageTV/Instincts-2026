@@ -106,7 +106,8 @@ namespace BoxSkip
 			RE::BSTSmartPointer<RE::IMessageBoxCallback> cb;
 			const auto&                                  cfg = Config::GetBox();
 			try {
-				if (!cfg.skip && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
+				// always rename first: if the skip below cannot close the box, the player still sees "Cancel", not two "Attempt to Tame"
+				if (a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
 					RenameSecondButton();
 				}
 				if (cfg.skip && a_message.type == RE::UI_MESSAGE_TYPE::kShow) {
